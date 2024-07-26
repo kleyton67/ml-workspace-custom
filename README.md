@@ -8,41 +8,14 @@
     <strong>All-in-one web-based development environment for machine learning</strong>
 </p>
 
-<p align="center">
-    <a href="https://hub.docker.com/r/mltooling/ml-workspace" title="Docker Image Version"><img src="https://img.shields.io/docker/v/mltooling/ml-workspace?color=blue&sort=semver"></a>
-    <a href="https://hub.docker.com/r/mltooling/ml-workspace" title="Docker Pulls"><img src="https://img.shields.io/docker/pulls/mltooling/ml-workspace.svg?color=blue"></a>
-    <a href="https://hub.docker.com/r/mltooling/ml-workspace" title="Docker Image Size"><img src="https://img.shields.io/docker/image-size/mltooling/ml-workspace?color=blue&sort=semver"></a>
-    <a href="https://gitter.im/ml-tooling/ml-workspace" title="Chat on Gitter"><img src="https://badges.gitter.im/ml-tooling/ml-workspace.svg"></a>
-    <a href="https://mltooling.substack.com/subscribe" title="Subscribe to newsletter"><img src="http://bit.ly/2Md9rxM"></a>
-    <a href="https://twitter.com/mltooling" title="Follow on Twitter"><img src="https://img.shields.io/twitter/follow/mltooling.svg?style=social&label=Follow"></a>
-</p>
+The ML workspace is an all-in-one web-based IDE specialized for machine learning and data science. It is simple to deploy and gets you started within minutes to productively build ML solutions on your own machines. This workspace is the ultimate tool for developers, preloaded with a variety of popular data science libraries (e.g., Tensorflow, PyTorch, Keras, Sklearn) and dev tools (e.g., Jupyter, VS Code, Tensorboard) perfectly configured, optimized, and integrated.
 
-<p align="center">
-  <a href="#getting-started">Getting Started</a> •
-  <a href="#features">Features & Screenshots</a> •
-  <a href="#support">Support</a> •
-  <a href="https://github.com/ml-tooling/ml-workspace/issues/new?labels=bug&template=01_bug-report.md">Report a Bug</a> •
-  <a href="#faq">FAQ</a> •
-  <a href="#known-issues">Known Issues</a> •
-  <a href="#contribution">Contribution</a>
-</p>
+🛠 Customizations for BALab (Business Analytics Lab)
+- **Self-maintained CUDA version:** Due to the original version not being updated for a long time, this customization ensures that the CUDA version is actively maintained and frequently updated, ensuring compatibility with the latest developments in machine learning.
+- **Commitment to updates:** Regular updates to the CUDA version are provided to keep the workspace in sync with the latest tools and technologies.
+**For more information and to see the original version, visit: [ml-tooling/ml-workspace.](https://github.com/ml-tooling/ml-workspace)**
 
-The ML workspace is an all-in-one web-based IDE specialized for machine learning and data science. It is simple to deploy and gets you started within minutes to productively built ML solutions on your own machines. This workspace is the ultimate tool for developers preloaded with a variety of popular data science libraries (e.g., Tensorflow, PyTorch, Keras, Sklearn) and dev tools (e.g., Jupyter, VS Code, Tensorboard) perfectly configured, optimized, and integrated.
-
-## Highlights
-
-- 💫&nbsp; Jupyter, JupyterLab, and Visual Studio Code web-based IDEs.
-- 🗃&nbsp; Pre-installed with many popular data science libraries & tools.
-- 🖥&nbsp; Full Linux desktop GUI accessible via web browser.
-- 🔀&nbsp; Seamless Git integration optimized for notebooks.
-- 📈&nbsp; Integrated hardware & training monitoring via Tensorboard & Netdata.
-- 🚪&nbsp; Access from anywhere via Web, SSH, or VNC under a single port.
-- 🎛&nbsp; Usable as remote kernel (Jupyter) or remote machine (VS Code) via SSH.
-- 🐳&nbsp; Easy to deploy on Mac, Linux, and Windows via Docker.
-
-<br>
-
-## Getting Started
+<!-- ## Getting Started
 
 <p>
 <a href="https://labs.play-with-docker.com/?stack=https://raw.githubusercontent.com/ml-tooling/ml-workspace/main/deployment/play-with-docker/docker-compose.yml" title="Docker Image Metadata" target="_blank"><img src="https://cdn.rawgit.com/play-with-docker/stacks/cff22438/assets/images/button.png" alt="Try in PWD" width="100px"></a>
@@ -1184,4 +1157,4 @@ Refer to our [contribution guides](https://github.com/ml-tooling/ml-workspace/bl
 
 ---
 
-Licensed **Apache 2.0**. Created and maintained with ❤️&nbsp; by developers from Berlin.
+Licensed **Apache 2.0**. Created and maintained with ❤️&nbsp; by developers from Berlin. -->
