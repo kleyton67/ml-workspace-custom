@@ -1,5 +1,5 @@
 <h1 align="center">
-    <a href="https://github.com/ml-tooling/ml-workspace" title="ML Workspace Home">
+    <a href="https://github.com/anu7n/ml-workspace-custom" title="ML Workspace Customized Home">
     <img width=50% alt="" src="https://github.com/ml-tooling/ml-workspace/raw/main/docs/images/ml-workspace-logo.png"> </a>
     <br>
 </h1>
