@@ -1,4 +1,4 @@
-FROM ubuntu:20.04
+FROM nvidia/cuda:12.5.0-devel-ubuntu20.04
 
 USER root
 
@@ -287,17 +287,17 @@ RUN wget --no-verbose https://repo.anaconda.com/miniconda/Miniconda3-py38_${COND
     # Deactivate pip interoperability (currently default), otherwise conda tries to uninstall pip packages
     $CONDA_ROOT/bin/conda config --system --set pip_interop_enabled false && \
     # Update conda
-    $CONDA_ROOT/bin/conda update -y -n base -c defaults conda && \
+    #$CONDA_ROOT/bin/conda update -y -n base -c defaults conda && \
     $CONDA_ROOT/bin/conda update -y setuptools && \
-    $CONDA_ROOT/bin/conda install -y conda-build && \
+    $CONDA_ROOT/bin/conda install -y conda-build==3.21.4 && \
     # Update selected packages - install python 3.8.x
-    $CONDA_ROOT/bin/conda install -y --update-all python=$PYTHON_VERSION && \
+    $CONDA_ROOT/bin/conda install -y python=$PYTHON_VERSION && \
     # Link Conda
     ln -s $CONDA_ROOT/bin/python /usr/local/bin/python && \
     ln -s $CONDA_ROOT/bin/conda /usr/bin/conda && \
     # Update
-    $CONDA_ROOT/bin/conda install -y pip && \
-    $CONDA_ROOT/bin/pip install --upgrade pip && \
+    $CONDA_ROOT/bin/conda install -y pip==21.3.1 && \
+    $CONDA_ROOT/bin/pip install --upgrade pip==21.3.1 && \
     chmod -R a+rwx /usr/local/bin/ && \
     # Cleanup - Remove all here since conda is not in path as of now
     # find /opt/conda/ -follow -type f -name '*.a' -delete && \
@@ -318,7 +318,7 @@ ENV LD_LIBRARY_PATH=$CONDA_ROOT/lib
 RUN git clone https://github.com/pyenv/pyenv.git $RESOURCES_PATH/.pyenv && \
     # Install pyenv plugins based on pyenv installer
     git clone https://github.com/pyenv/pyenv-virtualenv.git $RESOURCES_PATH/.pyenv/plugins/pyenv-virtualenv  && \
-    git clone git://github.com/pyenv/pyenv-doctor.git $RESOURCES_PATH/.pyenv/plugins/pyenv-doctor && \
+    git clone https://github.com/pyenv/pyenv-doctor.git $RESOURCES_PATH/.pyenv/plugins/pyenv-doctor && \
     git clone https://github.com/pyenv/pyenv-update.git $RESOURCES_PATH/.pyenv/plugins/pyenv-update && \
     git clone https://github.com/pyenv/pyenv-which-ext.git $RESOURCES_PATH/.pyenv/plugins/pyenv-which-ext && \
     apt-get update && \
@@ -357,7 +357,7 @@ RUN \
     ln -s /usr/bin/node /opt/node/bin/node && \
     ln -s /usr/bin/npm /opt/node/bin/npm && \
     # Update npm
-    /usr/bin/npm install -g npm && \
+    /usr/bin/npm install -g npm@7.19.1 && \
     # Install Yarn
     /usr/bin/npm install -g yarn && \
     # Install typescript
@@ -367,7 +367,7 @@ RUN \
     # Install node-gyp
     /usr/bin/npm install -g node-gyp && \
     # Update all packages to latest version
-    /usr/bin/npm update -g && \
+    # /usr/bin/npm update -g && \
     # Cleanup
     clean-layer.sh
 
@@ -561,17 +561,17 @@ RUN \
     ln -s -f $CONDA_ROOT/bin/python /usr/bin/python && \
     apt-get update && \
     # upgrade pip
-    pip install --upgrade pip && \
+    pip install --upgrade pip==21.3.1 && \
     # If minimal flavor - install
     if [ "$WORKSPACE_FLAVOR" = "minimal" ]; then \
         # Install nomkl - mkl needs lots of space
-        conda install -y --update-all 'python='$PYTHON_VERSION nomkl ; \
+        conda install -y 'python='$PYTHON_VERSION nomkl ; \
     else \
         # Install mkl for faster computations
-        conda install -y --update-all 'python='$PYTHON_VERSION mkl-service mkl ; \
+        conda install -y 'python='$PYTHON_VERSION mkl-service mkl ; \
     fi && \
     # Install some basics - required to run container
-    conda install -y --update-all \
+    conda install -y \
             'python='$PYTHON_VERSION \
             'ipython=7.24.*' \
             'notebook=6.4.*' \
@@ -583,8 +583,8 @@ RUN \
             # TODO install scipy, numpy, sklearn, and numexpr via conda for mkl optimizaed versions: https://docs.anaconda.com/mkl-optimizations/
             'scipy==1.7.*' \
             'numpy==1.19.*' \
-            scikit-learn \
-            numexpr && \
+            'scikit-learn==0.24.2' \
+            'numexpr==2.7.3' && \
             # installed via apt-get and pip: protobuf \
             # installed via apt-get: zlib  && \
     # Switch of channel priority, makes some trouble
@@ -679,6 +679,8 @@ COPY resources/jupyter/jupyter_notebook_config.json /etc/jupyter/
 
 # install jupyter extensions
 RUN \
+    # Install jinja2==3.0.3 and MarkupSafe==2.0.1
+    pip install --no-cache-dir --upgrade jinja2==3.0.1 MarkupSafe==2.0.1 && \
     # Create empty notebook configuration
     mkdir -p $HOME/.jupyter/nbconfig/ && \
     printf "{\"load_extensions\": {}}" > $HOME/.jupyter/nbconfig/notebook.json && \
@@ -1033,8 +1035,8 @@ RUN \
     echo "[Desktop Entry]\nVersion=1.0\nType=Link\nName=Glances\nComment=Hardware Monitoring\nCategories=System;Utility;\nIcon=/resources/icons/glances-icon.png\nURL=http://localhost:8092/tools/glances" > /usr/share/applications/glances.desktop && \
     chmod +x /usr/share/applications/glances.desktop && \
     # Remove mail and logout desktop icons
-    rm /usr/share/applications/xfce4-mail-reader.desktop && \
-    rm /usr/share/applications/xfce4-session-logout.desktop
+    rm -f /usr/share/applications/xfce4-mail-reader.desktop && \
+    rm -f /usr/share/applications/xfce4-session-logout.desktop
 
 # Copy resources into workspace
 COPY resources/tools $RESOURCES_PATH/tools
