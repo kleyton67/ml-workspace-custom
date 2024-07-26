@@ -13,6 +13,7 @@ The ML workspace is an all-in-one web-based IDE specialized for machine learning
 🛠 Customizations for BALab (Business Analytics Lab)
 - **Self-maintained CUDA version:** Due to the original version not being updated for a long time, this customization ensures that the CUDA version is actively maintained and frequently updated, ensuring compatibility with the latest developments in machine learning.
 - **Commitment to updates:** Regular updates to the CUDA version are provided to keep the workspace in sync with the latest tools and technologies.
+<b>
 **For more information and to see the original version, visit: [ml-tooling/ml-workspace.](https://github.com/ml-tooling/ml-workspace)**
 
 <!-- ## Getting Started
