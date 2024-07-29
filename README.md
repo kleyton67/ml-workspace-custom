@@ -5,7 +5,7 @@
 </h1>
 
 <p align="center">
-    <strong>All-in-one web-based development environment for machine learning</strong>
+    <strong>Customized all-in-one web-based development environment for machine learning</strong>
 </p>
 
 The ML workspace is an all-in-one web-based IDE specialized for machine learning and data science. It is simple to deploy and gets you started within minutes to productively build ML solutions on your own machines. This workspace is the ultimate tool for developers, preloaded with a variety of popular data science libraries (e.g., Tensorflow, PyTorch, Keras, Sklearn) and dev tools (e.g., Jupyter, VS Code, Tensorboard) perfectly configured, optimized, and integrated.
