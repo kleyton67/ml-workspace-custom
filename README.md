@@ -42,7 +42,7 @@ We strive to keep everything as similar as possible to the original version insi
 
 ### Prerequisites
 
-- **CUDA Version 12.5** need to be installed on your machine (tested well on nvidia driver Version: 555.99)
+- **CUDA version 12.5** need to be installed on your machine (tested well on nvidia driver version: 555.99)
 - The workspace requires **Docker** to be installed on your machine ([📖 Installation Guide](https://docs.docker.com/install/#supported-platforms)).
 
 ### Deployment
@@ -72,3 +72,6 @@ docker run -d \
 ```
 
 This command runs the container in background (`-d`), mounts your current working directory into the `/workspace` folder (`-v`), secures the workspace via a provided token (`--env AUTHENTICATE_VIA_JUPYTER`), provides 512MB of shared memory (`--shm-size`) to prevent unexpected crashes (see [known issues section](https://github.com/ml-tooling/ml-workspace#known-issues)), and keeps the container running even on system restarts (`--restart always`). You can find additional options for docker run [here](https://docs.docker.com/engine/reference/commandline/run/) and workspace configuration options in [the following section](https://github.com/ml-tooling/ml-workspace#Configuration).
+
+---
+❤️✌️
