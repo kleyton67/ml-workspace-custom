@@ -52,7 +52,7 @@ Deploying a single workspace instance is as simple as:
 ```bash
 docker run -p 8080:8080 greathopes/custom-workspace:12-5
 ```
-> *we use image tags as the label for the supported CUDA version (ex:12-5 for CUDA 12-5)*
+> *we use image tags as the label for the supported CUDA version (ex:12-5 for CUDA 12.5)*
 
 Voilà, that was easy! Now, Docker will pull the latest workspace image to your machine. This may take a few minutes, depending on your internet speed. Once the workspace is started, you can access it via http://localhost:8080.
 
