@@ -36,9 +36,27 @@ We strive to keep everything as similar as possible to the original version insi
 
 <br>
 
+The workspace is equipped with a selection of best-in-class open-source development tools to help with the machine learning workflow. Many of these tools can be started from the `Open Tool` menu from Jupyter (the main application of the workspace):
+
+<p align="center">
+<img style="width: 80%; height: 60%;" src="https://github.com/anu7n/ml-workspace-custom/blob/main/docs/images/Workspace%20Features.png"/>
+</p>
+
+> _Within your workspace you have **full root & sudo privileges** to install any library or tool you need via terminal (e.g., `pip`, `apt-get`, `conda`, or `npm`). You can find more ways to extend the workspace within the [Extensibility](https://github.com/ml-tooling/ml-workspace#extensibility) section on the original documentation_
+
+<br>
+
+<p align="center">
+<img style="width: 80%; height: 60%;" src="https://github.com/anu7n/ml-workspace-custom/blob/main/docs/images/Updated%20CUDA%20Features.png"/>
+</p>
+
+> _The updated CUDA version is actively maintained and frequently updated, ensuring compatibility with the latest requirements in development machine learning model._
+
+<br>
+
 ## Getting Started (Start single instance)
 
-### CUDA 12.5
+### Example for CUDA 12.5 Version
 
 ### Prerequisites
 
@@ -72,6 +90,16 @@ docker run -d \
 ```
 
 This command runs the container in background (`-d`), mounts your current working directory into the `/workspace` folder (`-v`), secures the workspace via a provided token (`--env AUTHENTICATE_VIA_JUPYTER`), provides 512MB of shared memory (`--shm-size`) to prevent unexpected crashes (see [known issues section](https://github.com/ml-tooling/ml-workspace#known-issues)), and keeps the container running even on system restarts (`--restart always`). You can find additional options for docker run [here](https://docs.docker.com/engine/reference/commandline/run/) and workspace configuration options in [the following section](https://github.com/ml-tooling/ml-workspace#Configuration).
+
+
+### List of Images Availability
+
+| CUDA Version  | Driver Version*  | Images                                              |
+| ------------- | ------------- |-----------------------------------------------------|
+| CUDA 12.4 | Nvidia 550.76 |`docker pull greathopes/custom-workspace:12-4`|
+| CUDA 12.5 | Nvidia 555.99 |`docker pull greathopes/custom-workspace:12-5`|
+
+> _*Driver Version is the driver that installed on the host machine to build and test the images_
 
 ---
 ❤️✌️
