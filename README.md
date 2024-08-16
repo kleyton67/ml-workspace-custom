@@ -5,6 +5,7 @@
 </h1>
 
 <p align="center">
+    <img src="https://views-counter.vercel.app/badge?pageId=https%3A%2F%2Fgithub%2Ecom%2Fanu7n%2Fml-workspace-custom&leftColor=000000&rightColor=ff0000&type=total&label=REPO%20VIEWS&style=none" alt="Views Counter">
     <strong>Customized all-in-one web-based development environment for machine learning</strong>
 </p>
 
