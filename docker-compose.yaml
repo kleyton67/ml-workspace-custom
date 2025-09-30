@@ -1,0 +1,25 @@
+services:
+  ml-workspace:
+    image: mltooling/ml-workspace:0.u2404.n13.0
+    build:
+      dockerfile: ./Dockerfile
+      context: .
+    container_name: ml-workspace
+    ports:
+      - "8580:8080"
+    volumes:
+      # - /mnt/ssds/SSD_1/mltooling/jupyter-data:/workspace
+      # - /opt/conda:/mnt/ssds/SSD_1/mltooling/conda
+      - /var/run/docker.sock:/var/run/docker.sock
+    deploy:       # ← Modern Docker GPU reservation
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    environment:
+      - AUTHENTICATE_VIA_JUPYTER=test-182
+    shm_size: 512m
+    restart: always
+    network_mode: bridge
