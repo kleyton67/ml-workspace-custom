@@ -123,6 +123,7 @@ if ENV_MAX_NUM_THREADS:
     set_env_variable("TBB_NUM_THREADS", ENV_MAX_NUM_THREADS, ignore_if_set=True)  # TBB
     # GOTO_NUM_THREADS
 
+
 ENV_RESOURCES_PATH = os.getenv("RESOURCES_PATH", "/resources")
 ENV_WORKSPACE_HOME = os.getenv("WORKSPACE_HOME", "/workspace")
 
@@ -134,19 +135,23 @@ if EXECUTE_CODE:
     # use workspace as working directory
     sys.exit(
         call(
-            "cd "
+            f"/bin/bash -c 'export ENV_WORKSPACE_HOME={ENV_WORKSPACE_HOME} && "
+            f"export ENV_RESOURCES_PATH={ENV_RESOURCES_PATH} && "
+            + "cd "
             + ENV_WORKSPACE_HOME
             + " && python "
             + ENV_RESOURCES_PATH
             + "/scripts/execute_code.py"
-            + script_arguments,
+            + script_arguments+"'",
             shell=True,
         )
     )
 
 sys.exit(
     call(
-        "python " + ENV_RESOURCES_PATH + "/scripts/run_workspace.py" + script_arguments,
+        f"/bin/bash -c 'export ENV_WORKSPACE_HOME={ENV_WORKSPACE_HOME} && "
+        f"export ENV_RESOURCES_PATH={ENV_RESOURCES_PATH} && "
+        + "python " + ENV_RESOURCES_PATH + "/scripts/run_workspace.py" + script_arguments + "'",
         shell=True,
     )
 )

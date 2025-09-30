@@ -1,11 +1,23 @@
-FROM nvidia/cuda:12.5.0-devel-ubuntu20.04
+FROM nvidia/cuda:13.0.1-cudnn-devel-ubuntu24.04
 
 USER root
 
 ### BASICS ###
-# Technical Environment Variables
-ENV \
-    SHELL="/bin/bash" \
+
+COPY resources/nginx/lua-extensions /etc/nginx/nginx_plugins
+
+WORKDIR $HOME
+
+# Layer cleanup script
+COPY resources/scripts/  /usr/bin/
+
+COPY \
+    resources/jupyter/start.sh \
+    resources/jupyter/start-jupyter.sh \
+    resources/jupyter/start-singleuser.sh \
+    /usr/local/bin/
+
+ENV SHELL="/bin/bash" \
     HOME="/root"  \
     # Nobteook server user: https://github.com/jupyter/docker-stacks/blob/master/base-notebook/Dockerfile#L33
     NB_USER="root" \
@@ -17,28 +29,41 @@ ENV \
     DEBIAN_FRONTEND="noninteractive" \
     RESOURCES_PATH="/resources" \
     SSL_RESOURCES_PATH="/resources/ssl" \
-    WORKSPACE_HOME="/workspace"
+    PYTHON_VERSION="3.12" \
+    LC_ALL="en_US.UTF-8" \
+    LANG="en_US.UTF-8" \
+    LANGUAGE="en_US:en" \
+    CONDA_DIR=/opt/conda \
+    CONDA_ROOT=/opt/conda \
+    CONDA_PYTHON_DIR=/opt/conda/lib/python
 
-WORKDIR $HOME
+# Copy resources into workspace
+COPY resources $RESOURCES_PATH
+# Configure Jupyter / JupyterLab
+# Add as jupyter system configuration
+COPY resources/jupyter/nbconfig /etc/jupyter/nbconfig
+COPY resources/jupyter/jupyter_notebook_config.json /etc/jupyter/
+
+# Technical Environment Variables
+
+ENV WORKSPACE_HOME=$HOME/workspace \
+    # TODO: CONDA_DIR is deprecated and should be removed in the future
+    LD_LIBRARY_PATH=$CONDA_ROOT/lib \
+    PATH=/opt/node/bin:$HOME/.local/bin:/usr/local/openresty/nginx/sbin:$CONDA_ROOT/bin:$PATH \
+    # Add the defaults from /lib/x86_64-linux-gnu, otherwise lots of no version errors
+    # cannot be added above otherwise there are errors in the installation of the gui tools
+    # Call order: https://unix.stackexchange.com/questions/367600/what-is-the-order-that-linuxs-dynamic-linker-searches-paths-in
+    LD_LIBRARY_PATH=/lib/x86_64-linux-gnu:/usr/lib/:x86_64-linux-gnu:$CONDA_ROOT/lib
 
 # Make folders
 RUN \
-    mkdir $RESOURCES_PATH && chmod a+rwx $RESOURCES_PATH && \
-    mkdir $WORKSPACE_HOME && chmod a+rwx $WORKSPACE_HOME && \
-    mkdir $SSL_RESOURCES_PATH && chmod a+rwx $SSL_RESOURCES_PATH
-
-# Layer cleanup script
-COPY resources/scripts/clean-layer.sh  /usr/bin/clean-layer.sh
-COPY resources/scripts/fix-permissions.sh  /usr/bin/fix-permissions.sh
-
- # Make clean-layer and fix-permissions executable
- RUN \
+    mkdir -p $RESOURCES_PATH && chmod a+rwx $RESOURCES_PATH && \
+    mkdir -p $WORKSPACE_HOME && chmod a+rwx $WORKSPACE_HOME && \
+    mkdir -p $SSL_RESOURCES_PATH && chmod a+rwx $SSL_RESOURCES_PATH && \
     chmod a+rwx /usr/bin/clean-layer.sh && \
-    chmod a+rwx /usr/bin/fix-permissions.sh
-
-# Generate and Set locals
-# https://stackoverflow.com/questions/28405902/how-to-set-the-locale-inside-a-debian-ubuntu-docker-container#38553499
-RUN \
+    chmod a+rwx /usr/bin/fix-permissions.sh && \
+    # Generate and Set locals
+    # https://stackoverflow.com/questions/28405902/how-to-set-the-locale-inside-a-debian-ubuntu-docker-container#38553499
     apt-get update && \
     apt-get install -y locales && \
     # install locales-all?
@@ -46,21 +71,7 @@ RUN \
     locale-gen && \
     dpkg-reconfigure --frontend=noninteractive locales && \
     update-locale LANG=en_US.UTF-8 && \
-    # Cleanup
-    clean-layer.sh
-
-ENV LC_ALL="en_US.UTF-8" \
-    LANG="en_US.UTF-8" \
-    LANGUAGE="en_US:en"
-
-# Install basics
-RUN \
-    # TODO add repos?
-    # add-apt-repository ppa:apt-fast/stable
-    # add-apt-repository 'deb http://security.ubuntu.com/ubuntu xenial-security main'
-    apt-get update --fix-missing && \
-    apt-get install -y sudo apt-utils && \
-    apt-get upgrade -y && \
+    # Install basics
     apt-get update && \
     apt-get install -y --no-install-recommends \
         # This is necessary for apt to access HTTPS sources:
@@ -82,7 +93,6 @@ RUN \
         iproute2 \
         psmisc \
         tmux \
-        dpkg-sig \
         uuid-dev \
         csh \
         xclip \
@@ -177,16 +187,12 @@ RUN \
         unzip \
         bzip2 \
         lzop \
-	    # deprecates bsdtar (https://ubuntu.pkgs.org/20.04/ubuntu-universe-i386/libarchive-tools_3.4.0-2ubuntu1_i386.deb.html)
-        libarchive-tools \
-        zlibc \
         # unpack (almost) everything with one command
         unp \
         libbz2-dev \
         liblzma-dev \
+        libopenmpi-dev openmpi-bin \
         zlib1g-dev && \
-    # Update git to newest version
-    add-apt-repository -y ppa:git-core/ppa  && \
     apt-get update && \
     apt-get install -y --no-install-recommends git && \
     # Fix all execution permissions
@@ -195,15 +201,9 @@ RUN \
     ldconfig && \
     # Fix permissions
     fix-permissions.sh $HOME && \
-    # Cleanup
-    clean-layer.sh
-
-# Add tini
-RUN wget --no-verbose https://github.com/krallin/tini/releases/download/v0.19.0/tini -O /tini && \
-    chmod +x /tini
-
-# prepare ssh for inter-container communication for remote python kernel
-RUN \
+    wget --no-verbose https://github.com/krallin/tini/releases/download/v0.19.0/tini -O /tini && \
+    chmod +x /tini && \
+    # prepare ssh for inter-container communication for remote python kernel
     apt-get update && \
     apt-get install -y --no-install-recommends \
         openssh-client \
@@ -217,17 +217,13 @@ RUN \
     mkdir -p $HOME/.ssh/ && \
     # create empty config file if not exists
     touch $HOME/.ssh/config  && \
-    sudo chown -R $NB_USER:users $HOME/.ssh && \
+    chown -R $NB_USER:users $HOME/.ssh && \
     chmod 700 $HOME/.ssh && \
     printenv >> $HOME/.ssh/environment && \
     chmod -R a+rwx /usr/local/bin/ && \
     # Fix permissions
     fix-permissions.sh $HOME && \
-    # Cleanup
-    clean-layer.sh
-
-RUN \
-    OPEN_RESTY_VERSION="1.19.3.2" && \
+    OPEN_RESTY_VERSION="1.27.1.2" && \
     mkdir $RESOURCES_PATH"/openresty" && \
     cd $RESOURCES_PATH"/openresty" && \
     apt-get update && \
@@ -250,30 +246,12 @@ RUN \
     rm -r $RESOURCES_PATH"/openresty" && \
     # Fix permissions
     chmod -R a+rwx $RESOURCES_PATH && \
-    # Cleanup
-    clean-layer.sh
-
-ENV PATH=/usr/local/openresty/nginx/sbin:$PATH
-
-COPY resources/nginx/lua-extensions /etc/nginx/nginx_plugins
-
-### END BASICS ###
-
-### RUNTIMES ###
-# Install Miniconda: https://repo.continuum.io/miniconda/
-
-ENV \
-    # TODO: CONDA_DIR is deprecated and should be removed in the future
-    CONDA_DIR=/opt/conda \
-    CONDA_ROOT=/opt/conda \
-    PYTHON_VERSION="3.8.10" \
-    CONDA_PYTHON_DIR=/opt/conda/lib/python3.8 \
-    MINICONDA_VERSION=4.9.2 \
-    MINICONDA_MD5=122c8c9beb51e124ab32a0fa6426c656 \
-    CONDA_VERSION=4.9.2
-
-RUN wget --no-verbose https://repo.anaconda.com/miniconda/Miniconda3-py38_${CONDA_VERSION}-Linux-x86_64.sh -O ~/miniconda.sh && \
-    echo "${MINICONDA_MD5} *miniconda.sh" | md5sum -c - && \
+    ### END BASICS ###
+    ### RUNTIMES ###
+    # Install Miniconda: https://repo.continuum.io/miniconda/
+    set -eax && \
+    wget --no-verbose https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda.sh && \
+    # echo "${MINICONDA_MD5} *miniconda.sh" | md5sum -c - && \
     /bin/bash ~/miniconda.sh -b -p $CONDA_ROOT && \
     export PATH=$CONDA_ROOT/bin:$PATH && \
     rm ~/miniconda.sh && \
@@ -281,23 +259,27 @@ RUN wget --no-verbose https://repo.anaconda.com/miniconda/Miniconda3-py38_${COND
     # TODO: Add conde-forge as main channel -> remove if testted
     # TODO, use condarc file
     $CONDA_ROOT/bin/conda config --system --add channels conda-forge && \
+    $CONDA_ROOT/bin/conda config --system --set pip_interop_enabled false && \
     $CONDA_ROOT/bin/conda config --system --set auto_update_conda False && \
     $CONDA_ROOT/bin/conda config --system --set show_channel_urls True && \
     $CONDA_ROOT/bin/conda config --system --set channel_priority strict && \
+    $CONDA_ROOT/bin/conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main && \
+    $CONDA_ROOT/bin/conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r && \
     # Deactivate pip interoperability (currently default), otherwise conda tries to uninstall pip packages
-    $CONDA_ROOT/bin/conda config --system --set pip_interop_enabled false && \
     # Update conda
     #$CONDA_ROOT/bin/conda update -y -n base -c defaults conda && \
     $CONDA_ROOT/bin/conda update -y setuptools && \
-    $CONDA_ROOT/bin/conda install -y conda-build==3.21.4 && \
-    # Update selected packages - install python 3.8.x
+    $CONDA_ROOT/bin/conda install -y conda-build && \
+    # Update selected packages - install python 
     $CONDA_ROOT/bin/conda install -y python=$PYTHON_VERSION && \
+    $CONDA_ROOT/bin/conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main && \
+    $CONDA_ROOT/bin/conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r && \
     # Link Conda
     ln -s $CONDA_ROOT/bin/python /usr/local/bin/python && \
     ln -s $CONDA_ROOT/bin/conda /usr/bin/conda && \
     # Update
-    $CONDA_ROOT/bin/conda install -y pip==21.3.1 && \
-    $CONDA_ROOT/bin/pip install --upgrade pip==21.3.1 && \
+    $CONDA_ROOT/bin/conda install -y pip && \
+    $CONDA_ROOT/bin/pip install --upgrade pip && \
     chmod -R a+rwx /usr/local/bin/ && \
     # Cleanup - Remove all here since conda is not in path as of now
     # find /opt/conda/ -follow -type f -name '*.a' -delete && \
@@ -305,46 +287,14 @@ RUN wget --no-verbose https://repo.anaconda.com/miniconda/Miniconda3-py38_${COND
     $CONDA_ROOT/bin/conda clean -y --packages && \
     $CONDA_ROOT/bin/conda clean -y -a -f  && \
     $CONDA_ROOT/bin/conda build purge-all && \
+    $CONDA_ROOT/bin/conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main && \
+    $CONDA_ROOT/bin/conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r && \
     # Fix permissions
-    fix-permissions.sh $CONDA_ROOT && \
-    clean-layer.sh
-
-ENV PATH=$CONDA_ROOT/bin:$PATH
-
-# There is nothing added yet to LD_LIBRARY_PATH, so we can overwrite
-ENV LD_LIBRARY_PATH=$CONDA_ROOT/lib
-
-# Install pyenv to allow dynamic creation of python versions
-RUN git clone https://github.com/pyenv/pyenv.git $RESOURCES_PATH/.pyenv && \
-    # Install pyenv plugins based on pyenv installer
-    git clone https://github.com/pyenv/pyenv-virtualenv.git $RESOURCES_PATH/.pyenv/plugins/pyenv-virtualenv  && \
-    git clone https://github.com/pyenv/pyenv-doctor.git $RESOURCES_PATH/.pyenv/plugins/pyenv-doctor && \
-    git clone https://github.com/pyenv/pyenv-update.git $RESOURCES_PATH/.pyenv/plugins/pyenv-update && \
-    git clone https://github.com/pyenv/pyenv-which-ext.git $RESOURCES_PATH/.pyenv/plugins/pyenv-which-ext && \
+    fix-permissions.sh && \
+    ### PROCESS TOOLS ###
+    # Install node.js
     apt-get update && \
-    # TODO: lib might contain high vulnerability
-    # Required by pyenv
-    apt-get install -y --no-install-recommends libffi-dev && \
-    clean-layer.sh
-
-# Add pyenv to path
-ENV PATH=$RESOURCES_PATH/.pyenv/shims:$RESOURCES_PATH/.pyenv/bin:$PATH \
-    PYENV_ROOT=$RESOURCES_PATH/.pyenv
-
-# Install pipx
-RUN pip install pipx && \
-    # Configure pipx
-    python -m pipx ensurepath && \
-    # Cleanup
-    clean-layer.sh
-ENV PATH=$HOME/.local/bin:$PATH
-
-# Install node.js
-RUN \
-    apt-get update && \
-    # https://nodejs.org/en/about/releases/ use even numbered releases, i.e. LTS versions
-    curl -sL https://deb.nodesource.com/setup_14.x | sudo -E bash - && \
-    apt-get install -y nodejs && \
+    apt-get install -y nodejs npm && \
     # As conda is first in path, the commands 'node' and 'npm' reference to the version of conda.
     # Replace those versions with the newly installed versions of node
     rm -f /opt/conda/bin/node && ln -s /usr/bin/node /opt/conda/bin/node && \
@@ -367,45 +317,23 @@ RUN \
     # Install node-gyp
     /usr/bin/npm install -g node-gyp && \
     # Update all packages to latest version
-    # /usr/bin/npm update -g && \
-    # Cleanup
-    clean-layer.sh
-
-ENV PATH=/opt/node/bin:$PATH
-
-# Java - removed
-
-### END RUNTIMES ###
-
-### PROCESS TOOLS ###
-
-# Removed XRDP
-
-# Install supervisor for process supervision
-RUN \
+    # /usr/bin/npm update -g
+    /usr/bin/npm install -g ungit && \
     apt-get update && \
     # Create sshd run directory - required for starting process via supervisor
     mkdir -p /var/run/sshd && chmod 400 /var/run/sshd && \
     # Install rsyslog for syslog logging
     apt-get install -y --no-install-recommends rsyslog && \
-    pipx install supervisor && \
-    pipx inject supervisor supervisor-stdout && \
+    apt install  -y --no-install-recommends supervisor && \
     # supervisor needs this logging path
     mkdir -p /var/log/supervisor/ && \
-    # Cleanup
-    clean-layer.sh
-
-### END PROCESS TOOLS ###
-
-### GUI TOOLS ###
-
-# Install xfce4 & gui tools
-RUN \
+    ### END PROCESS TOOLS ###
+    ### GUI TOOLS ###
+    # Install xfce4 & gui tools
     # Use staging channel to get newest xfce4 version (4.16)
     add-apt-repository -y ppa:xubuntu-dev/staging && \
     apt-get update && \
     apt-get install -y --no-install-recommends xfce4 && \
-    apt-get install -y --no-install-recommends gconf2 && \
     apt-get install -y --no-install-recommends xfce4-terminal && \
     apt-get install -y --no-install-recommends xfce4-clipman && \
     apt-get install -y --no-install-recommends xterm && \
@@ -440,30 +368,47 @@ RUN \
     # Install nautilus and support for sftp mounting
     apt-get install -y --no-install-recommends nautilus gvfs-backends && \
     # Install gigolo - Access remote systems
-    apt-get install -y --no-install-recommends gigolo gvfs-bin && \
+    apt-get install -y --no-install-recommends gigolo && \
     # xfce systemload panel plugin - needs to be activated
     # apt-get install -y --no-install-recommends xfce4-systemload-plugin && \
     # Leightweight ftp client that supports sftp, http, ...
     apt-get install -y --no-install-recommends gftp && \
-    # Install chrome
-    # sudo add-apt-repository ppa:system76/pop
-    add-apt-repository ppa:saiarcot895/chromium-beta && \
     apt-get update && \
     apt-get install -y chromium-browser chromium-browser-l10n chromium-codecs-ffmpeg && \
     ln -s /usr/bin/chromium-browser /usr/bin/google-chrome && \
     # Cleanup
     apt-get purge -y pm-utils xscreensaver* && \
     # Large package: gnome-user-guide 50MB app-install-data 50MB
-    apt-get remove -y app-install-data gnome-user-guide && \
-    clean-layer.sh
-
-# Add the defaults from /lib/x86_64-linux-gnu, otherwise lots of no version errors
-# cannot be added above otherwise there are errors in the installation of the gui tools
-# Call order: https://unix.stackexchange.com/questions/367600/what-is-the-order-that-linuxs-dynamic-linker-searches-paths-in
-ENV LD_LIBRARY_PATH=/lib/x86_64-linux-gnu:/usr/lib/x86_64-linux-gnu:$CONDA_ROOT/lib
-
-# Install VNC
-RUN \
+    apt-get remove -y app-install-data gnome && \
+    # Add Docker's official GPG key:
+    apt-get update && \
+    apt-get install ca-certificates curl && \
+    install -m 0755 -d /etc/apt/keyrings && \
+    curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc && \
+    chmod a+r /etc/apt/keyrings/docker.asc && \
+    # Add the repository to Apt sources:
+    echo \
+    "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu \
+    $(. /etc/os-release && echo "${UBUNTU_CODENAME:-$VERSION_CODENAME}") stable" | \
+    tee /etc/apt/sources.list.d/docker.list > /dev/null && \
+    apt-get update && \
+    apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin && \
+    # libartals == 40MB liblapack-dev == 20 MB
+    apt-get install -y --no-install-recommends liblapack-dev libatlas-base-dev libeigen3-dev libblas-dev && \
+    # pandoc -> installs libluajit -> problem for openresty
+    # HDF5 (19MB)
+    apt-get install -y --no-install-recommends libhdf5-dev && \
+    # TBB threading optimization
+    apt-get install -y --no-install-recommends libtbb-dev && \
+    # required for tesseract: 11MB - tesseract-ocr-dev?
+    apt-get install -y --no-install-recommends libtesseract-dev && \
+    pip install --no-cache-dir tesserocr && \
+    # TODO: installs tenserflow 2.4 - Required for tensorflow graphics (9MB)
+    apt-get install -y --no-install-recommends libopenexr-dev &&\
+    #pip install --no-cache-dir tensorflow-graphics==2020.5.20 && \
+    # GCC OpenMP (GOMP) support library
+    apt-get install -y --no-install-recommends libgomp1 && \
+    # Install VNC
     apt-get update  && \
     # required for websockify
     # apt-get install -y python-numpy  && \
@@ -480,350 +425,71 @@ RUN \
     mkdir -p $HOME/.vnc && \
     # Fix permissions
     fix-permissions.sh ${RESOURCES_PATH} && \
-    # Cleanup
-    clean-layer.sh
-
-# Install Web Tools - Offered via Jupyter Tooling Plugin
-
-## VS Code Server: https://github.com/codercom/code-server
-COPY resources/tools/vs-code-server.sh $RESOURCES_PATH/tools/vs-code-server.sh
-RUN \
+    # Install Web Tools - Offered via Jupyter Tooling Plugin
+    ## VS Code Server: https://github.com/codercom/code-server
     /bin/bash $RESOURCES_PATH/tools/vs-code-server.sh --install && \
-    # Cleanup
-    clean-layer.sh
-
-## ungit
-COPY resources/tools/ungit.sh $RESOURCES_PATH/tools/ungit.sh
-RUN \
+    ## ungit
     /bin/bash $RESOURCES_PATH/tools/ungit.sh --install && \
-    # Cleanup
-    clean-layer.sh
-
-## netdata
-COPY resources/tools/netdata.sh $RESOURCES_PATH/tools/netdata.sh
-RUN \
-    /bin/bash $RESOURCES_PATH/tools/netdata.sh --install && \
-    # Cleanup
-    clean-layer.sh
-
-## Glances webtool is installed in python section below via requirements.txt
-
-## Filebrowser
-COPY resources/tools/filebrowser.sh $RESOURCES_PATH/tools/filebrowser.sh
-RUN \
-    /bin/bash $RESOURCES_PATH/tools/filebrowser.sh --install && \
-    # Cleanup
-    clean-layer.sh
-
-ARG ARG_WORKSPACE_FLAVOR="full"
-ENV WORKSPACE_FLAVOR=$ARG_WORKSPACE_FLAVOR
-
-# Install Visual Studio Code
-COPY resources/tools/vs-code-desktop.sh $RESOURCES_PATH/tools/vs-code-desktop.sh
-RUN \
-    # If minimal flavor - do not install
-    if [ "$WORKSPACE_FLAVOR" = "minimal" ]; then \
-        exit 0 ; \
-    fi && \
+    # Install Visual Studio Code
     /bin/bash $RESOURCES_PATH/tools/vs-code-desktop.sh --install && \
-    # Cleanup
-    clean-layer.sh
-
-# Install Firefox
-
-COPY resources/tools/firefox.sh $RESOURCES_PATH/tools/firefox.sh
-
-RUN \
-    # If minimal flavor - do not install
-    if [ "$WORKSPACE_FLAVOR" = "minimal" ]; then \
-        exit 0 ; \
-    fi && \
+    # Install Firefox
     /bin/bash $RESOURCES_PATH/tools/firefox.sh --install && \
-    # Cleanup
-    clean-layer.sh
-
-### END GUI TOOLS ###
-
-### DATA SCIENCE BASICS ###
-
-## Python 3
-# Data science libraries requirements
-COPY resources/libraries ${RESOURCES_PATH}/libraries
-
-### Install main data science libs
-RUN \
+    ### END GUI TOOLS ###
+    ### DATA SCIENCE BASICS ###
+    ## Python 3
+    # Data science libraries requirements
     # Link Conda - All python are linke to the conda instances
     # Linking python 3 crashes conda -> cannot install anyting - remove instead
     # ln -s -f $CONDA_ROOT/bin/python /usr/bin/python3 && \
     # if removed -> cannot use add-apt-repository
     # rm /usr/bin/python3 && \
     # rm /usr/bin/python3.5
-    ln -s -f $CONDA_ROOT/bin/python /usr/bin/python && \
-    apt-get update && \
-    # upgrade pip
-    pip install --upgrade pip==21.3.1 && \
-    # If minimal flavor - install
-    if [ "$WORKSPACE_FLAVOR" = "minimal" ]; then \
-        # Install nomkl - mkl needs lots of space
-        conda install -y 'python='$PYTHON_VERSION nomkl ; \
-    else \
-        # Install mkl for faster computations
-        conda install -y 'python='$PYTHON_VERSION mkl-service mkl ; \
-    fi && \
+    ### Install main data science libs
+    ln -s -f $CONDA_ROOT/bin/python /usr/bin/python
+    
+RUN \
+    $CONDA_ROOT/bin/conda install -c conda-forge notebook && \
+    $CONDA_ROOT/bin/pip install --no-cache-dir -r ${RESOURCES_PATH}/libraries/requirements.txt && \
     # Install some basics - required to run container
-    conda install -y \
-            'python='$PYTHON_VERSION \
-            'ipython=7.24.*' \
-            'notebook=6.4.*' \
-            'jupyterlab=3.0.*' \
+    $CONDA_ROOT/bin/conda install -y \
+            'jupyter' \
+            'jupyterlab' \
             # TODO: nbconvert 6.x makes problems with template_path
-            'nbconvert=5.6.*' \
+            'nbconvert' \
             # TODO: temp fix: yarl version 1.5 is required for lots of libraries.
-            'yarl==1.5.*' \
+            'yarl' \
             # TODO install scipy, numpy, sklearn, and numexpr via conda for mkl optimizaed versions: https://docs.anaconda.com/mkl-optimizations/
-            'scipy==1.7.*' \
-            'numpy==1.19.*' \
-            'scikit-learn==0.24.2' \
-            'numexpr==2.7.3' && \
+            'scipy*' \
+            'numpy*' \
+            'scikit-learn' \
+            'numexpr' && \
+    $CONDA_ROOT/bin/jupyter contrib nbextension install --user && \
             # installed via apt-get and pip: protobuf \
             # installed via apt-get: zlib  && \
     # Switch of channel priority, makes some trouble
-    conda config --system --set channel_priority false && \
-    # Install minimal pip requirements
-    pip install --no-cache-dir --upgrade --upgrade-strategy only-if-needed -r ${RESOURCES_PATH}/libraries/requirements-minimal.txt && \
-    # If minimal flavor - exit here
-    if [ "$WORKSPACE_FLAVOR" = "minimal" ]; then \
-        # Remove pandoc - package for markdown conversion - not needed
-        # TODO: conda remove -y --force pandoc && \
-        # Fix permissions
-        fix-permissions.sh $CONDA_ROOT && \
-        # Cleanup
-        clean-layer.sh && \
-        exit 0 ; \
-    fi && \
-    # OpenMPI support
-    apt-get install -y --no-install-recommends libopenmpi-dev openmpi-bin && \
-    conda install -y --freeze-installed  \
-        'python='$PYTHON_VERSION \
-        boost \
-        mkl-include && \
-    # Install mkldnn
-    conda install -y --freeze-installed -c mingfeima mkldnn && \
-    # Install pytorch - cpu only
-    conda install -y -c pytorch "pytorch==1.9.*" cpuonly && \
-    # Install light pip requirements
-    pip install --no-cache-dir --upgrade --upgrade-strategy only-if-needed -r ${RESOURCES_PATH}/libraries/requirements-light.txt && \
-    # If light light flavor - exit here
-    if [ "$WORKSPACE_FLAVOR" = "light" ]; then \
-        # Fix permissions
-        fix-permissions.sh $CONDA_ROOT && \
-        # Cleanup
-        clean-layer.sh && \
-        exit 0 ; \
-    fi && \
-    # libartals == 40MB liblapack-dev == 20 MB
-    apt-get install -y --no-install-recommends liblapack-dev libatlas-base-dev libeigen3-dev libblas-dev && \
-    # pandoc -> installs libluajit -> problem for openresty
-    # HDF5 (19MB)
-    apt-get install -y --no-install-recommends libhdf5-dev && \
-    # TBB threading optimization
-    apt-get install -y --no-install-recommends libtbb-dev && \
-    # required for tesseract: 11MB - tesseract-ocr-dev?
-    apt-get install -y --no-install-recommends libtesseract-dev && \
-    pip install --no-cache-dir tesserocr && \
-    # TODO: installs tenserflow 2.4 - Required for tensorflow graphics (9MB)
-    apt-get install -y --no-install-recommends libopenexr-dev && \
-    #pip install --no-cache-dir tensorflow-graphics==2020.5.20 && \
-    # GCC OpenMP (GOMP) support library
-    apt-get install -y --no-install-recommends libgomp1 && \
-    # Install Intel(R) Compiler Runtime - numba optimization
-    # TODO: don't install, results in memory error: conda install -y --freeze-installed -c numba icc_rt && \
-    # Install libjpeg turbo for speedup in image processing
-    conda install -y --freeze-installed libjpeg-turbo && \
-    # Add snakemake for workflow management
-    conda install -y -c bioconda -c conda-forge snakemake-minimal && \
-    # Add mamba as conda alternativ
-    conda install -y -c conda-forge mamba && \
+    $CONDA_ROOT/bin/conda config --system --set channel_priority false && \
     # Faiss - A library for efficient similarity search and clustering of dense vectors.
-    conda install -y --freeze-installed faiss-cpu && \
-    # Install full pip requirements
-    pip install --no-cache-dir --upgrade --upgrade-strategy only-if-needed --use-deprecated=legacy-resolver -r ${RESOURCES_PATH}/libraries/requirements-full.txt && \
-    # Setup Spacy
-    # Spacy - download and large language removal
-    python -m spacy download en && \
+    $CONDA_ROOT/bin/conda install -y --freeze-installed faiss-cpu && \
     # Fix permissions
-    fix-permissions.sh $CONDA_ROOT && \
-    # Cleanup
-    clean-layer.sh
-
-# Fix conda version
-RUN \
+    # Fix conda version
     # Conda installs wrong node version - relink conda node to the actual node
     rm -f /opt/conda/bin/node && ln -s /usr/bin/node /opt/conda/bin/node && \
-    rm -f /opt/conda/bin/npm && ln -s /usr/bin/npm /opt/conda/bin/npm
-
-### END DATA SCIENCE BASICS ###
-
-### JUPYTER ###
-
-COPY \
-    resources/jupyter/start.sh \
-    resources/jupyter/start-notebook.sh \
-    resources/jupyter/start-singleuser.sh \
-    /usr/local/bin/
-
-# Configure Jupyter / JupyterLab
-# Add as jupyter system configuration
-COPY resources/jupyter/nbconfig /etc/jupyter/nbconfig
-COPY resources/jupyter/jupyter_notebook_config.json /etc/jupyter/
-
-# install jupyter extensions
-RUN \
+    rm -f /opt/conda/bin/npm && ln -s /usr/bin/npm /opt/conda/bin/npm && \
+    ### END DATA SCIENCE BASICS ###
+    ### JUPYTER ###
+    # install jupyter extensions
     # Install jinja2==3.0.3 and MarkupSafe==2.0.1
-    pip install --no-cache-dir --upgrade jinja2==3.0.1 MarkupSafe==2.0.1 && \
+    $CONDA_ROOT/bin/pip install --no-cache-dir --upgrade jinja2 MarkupSafe && \
     # Create empty notebook configuration
     mkdir -p $HOME/.jupyter/nbconfig/ && \
-    printf "{\"load_extensions\": {}}" > $HOME/.jupyter/nbconfig/notebook.json && \
-    # Activate and configure extensions
-    jupyter contrib nbextension install --sys-prefix && \
+    printf "{\"load_extensions\": {}}" > $HOME/.jupyter/nbconfig/notebook.json
     # nbextensions configurator
-    jupyter nbextensions_configurator enable --sys-prefix && \
-    # Configure nbdime
-    nbdime config-git --enable --global && \
-    # Activate Jupytext
-    jupyter nbextension enable --py jupytext --sys-prefix && \
-    # Enable useful extensions
-    jupyter nbextension enable skip-traceback/main --sys-prefix && \
-    # jupyter nbextension enable comment-uncomment/main && \
-    jupyter nbextension enable toc2/main --sys-prefix && \
-    jupyter nbextension enable execute_time/ExecuteTime --sys-prefix && \
-    jupyter nbextension enable collapsible_headings/main --sys-prefix && \
-    jupyter nbextension enable codefolding/main --sys-prefix && \
-    # Disable pydeck extension, cannot be loaded (404)
-    jupyter nbextension disable pydeck/extension && \
-    # Install and activate Jupyter Tensorboard
-    pip install --no-cache-dir git+https://github.com/InfuseAI/jupyter_tensorboard.git && \
-    jupyter tensorboard enable --sys-prefix && \
-    # TODO moved to configuration files = resources/jupyter/nbconfig Edit notebook config
-    # echo '{"nbext_hide_incompat": false}' > $HOME/.jupyter/nbconfig/common.json && \
-    cat $HOME/.jupyter/nbconfig/notebook.json | jq '.toc2={"moveMenuLeft": false,"widenNotebook": false,"skip_h1_title": false,"sideBar": true,"number_sections": false,"collapse_to_match_collapsible_headings": true}' > tmp.$$.json && mv tmp.$$.json $HOME/.jupyter/nbconfig/notebook.json && \
-    # If minimal flavor - exit here
-    if [ "$WORKSPACE_FLAVOR" = "minimal" ]; then \
-        # Cleanup
-        clean-layer.sh && \
-        exit 0 ; \
-    fi && \
-    # TODO: Not installed. Disable Jupyter Server Proxy
-    # jupyter nbextension disable jupyter_server_proxy/tree --sys-prefix && \
-    # Install jupyter black
-    jupyter nbextension install https://github.com/drillan/jupyter-black/archive/master.zip --sys-prefix && \
-    jupyter nbextension enable jupyter-black-master/jupyter-black --sys-prefix && \
-    # If light flavor - exit here
-    if [ "$WORKSPACE_FLAVOR" = "light" ]; then \
-        # Cleanup
-        clean-layer.sh && \
-        exit 0 ; \
-    fi && \
-    # Install and activate what if tool
-    pip install witwidget && \
-    jupyter nbextension install --py --symlink --sys-prefix witwidget && \
-    jupyter nbextension enable --py --sys-prefix witwidget && \
-    # Activate qgrid
-    jupyter nbextension enable --py --sys-prefix qgrid && \
-    # TODO: Activate Colab support
-    # jupyter serverextension enable --py jupyter_http_over_ws && \
-    # Activate Voila Rendering
-    # currently not working jupyter serverextension enable voila --sys-prefix && \
-    # Enable ipclusters
-    ipcluster nbextension enable && \
-    # Fix permissions? fix-permissions.sh $CONDA_ROOT && \
-    # Cleanup
-    clean-layer.sh
-
-# install jupyterlab
-RUN \
-    # without es6-promise some extension builds fail
-    npm install -g es6-promise && \
-    # define alias command for jupyterlab extension installs with log prints to stdout
-    jupyter lab build && \
-    lab_ext_install='jupyter labextension install -y --debug-log-path=/dev/stdout --log-level=WARN --minimize=False --no-build' && \
-    # jupyterlab installed in requirements section
-    $lab_ext_install @jupyter-widgets/jupyterlab-manager && \
-    # If minimal flavor - do not install jupyterlab extensions
-    if [ "$WORKSPACE_FLAVOR" = "minimal" ]; then \
-        # Final build with minimization
-        jupyter lab build -y --debug-log-path=/dev/stdout --log-level=WARN && \
-        # Cleanup
-        jupyter lab clean && \
-        jlpm cache clean && \
-        rm -rf $CONDA_ROOT/share/jupyter/lab/staging && \
-        clean-layer.sh && \
-        exit 0 ; \
-    fi && \
-    $lab_ext_install @jupyterlab/toc && \
-    # install temporarily from gitrepo due to the issue that jupyterlab_tensorboard does not work with 3.x yet as described here: https://github.com/chaoleili/jupyterlab_tensorboard/issues/28#issuecomment-783594541
-    #$lab_ext_install jupyterlab_tensorboard && \
-    pip install git+https://github.com/chaoleili/jupyterlab_tensorboard.git && \
-    # install jupyterlab git
-    # $lab_ext_install @jupyterlab/git && \
-    pip install jupyterlab-git && \
-    # jupyter serverextension enable --py jupyterlab_git && \
-    # For Matplotlib: https://github.com/matplotlib/jupyter-matplotlib
-    #$lab_ext_install jupyter-matplotlib && \
-    # Do not install any other jupyterlab extensions
-    if [ "$WORKSPACE_FLAVOR" = "light" ]; then \
-        # Final build with minimization
-        jupyter lab build -y --debug-log-path=/dev/stdout --log-level=WARN && \
-        # Cleanup
-        jupyter lab clean && \
-        jlpm cache clean && \
-        rm -rf $CONDA_ROOT/share/jupyter/lab/staging && \
-        clean-layer.sh && \
-        exit 0 ; \
-    fi \
-    # Install jupyterlab language server support
-    && pip install jupyterlab-lsp==3.7.0 jupyter-lsp==1.3.0 && \
-    # $lab_ext_install install @krassowski/jupyterlab-lsp@2.0.8 && \
-    # For Plotly
-    $lab_ext_install jupyterlab-plotly && \
-    $lab_ext_install install @jupyter-widgets/jupyterlab-manager plotlywidget && \
-    # produces build error: jupyter labextension install jupyterlab-chart-editor && \
-    $lab_ext_install jupyterlab-chart-editor && \
-    # Install jupyterlab variable inspector - https://github.com/lckr/jupyterlab-variableInspector
-    pip install lckr-jupyterlab-variableinspector && \
-    # For holoview
-    # TODO: pyviz is not yet supported by the current JupyterLab version
-    #     $lab_ext_install @pyviz/jupyterlab_pyviz && \
-    # Install Debugger in Jupyter Lab
-    # pip install --no-cache-dir xeus-python && \
-    # $lab_ext_install @jupyterlab/debugger && \
-    # Install jupyterlab code formattor - https://github.com/ryantam626/jupyterlab_code_formatter
-    $lab_ext_install @ryantam626/jupyterlab_code_formatter && \
-    pip install jupyterlab_code_formatter && \
-    jupyter serverextension enable --py jupyterlab_code_formatter \
-    # Final build with minimization
-    && jupyter lab build -y --debug-log-path=/dev/stdout --log-level=WARN && \
-    jupyter lab build && \
-    # Cleanup
-    # Clean jupyter lab cache: https://github.com/jupyterlab/jupyterlab/issues/4930
-    jupyter lab clean && \
-    jlpm cache clean && \
-    # Remove build folder -> should be remove by lab clean as well?
-    rm -rf $CONDA_ROOT/share/jupyter/lab/staging && \
-    clean-layer.sh
-
+    
 # Install Jupyter Tooling Extension
 COPY resources/jupyter/extensions $RESOURCES_PATH/jupyter-extensions
 
 RUN \
-    pip install --no-cache-dir $RESOURCES_PATH/jupyter-extensions/tooling-extension/ && \
-    # Cleanup
-    clean-layer.sh
-
-# Install and activate ZSH
-COPY resources/tools/oh-my-zsh.sh $RESOURCES_PATH/tools/oh-my-zsh.sh
-
-RUN \
+    $CONDA_ROOT/bin/pip install --no-cache-dir $RESOURCES_PATH/jupyter-extensions/tooling-extension/ && \
     # Install ZSH
     /bin/bash $RESOURCES_PATH/tools/oh-my-zsh.sh --install && \
     # Make zsh the default shell
@@ -834,13 +500,6 @@ RUN \
     chsh -s $(which zsh) $NB_USER && \
     # Install sdkman - needs to be executed after zsh
     curl -s https://get.sdkman.io | bash && \
-    # Cleanup
-    clean-layer.sh
-
-# Install Git LFS
-COPY resources/tools/git-lfs.sh $RESOURCES_PATH/tools/git-lfs.sh
-
-RUN \
     /bin/bash $RESOURCES_PATH/tools/git-lfs.sh --install && \
     # Cleanup
     clean-layer.sh
@@ -850,92 +509,21 @@ RUN \
 # Install vscode extension
 # https://github.com/cdr/code-server/issues/171
 # Alternative install: /usr/local/bin/code-server --user-data-dir=$HOME/.config/Code/ --extensions-dir=$HOME/.vscode/extensions/ --install-extension ms-python-release && \
-RUN \
-    SLEEP_TIMER=25 && \
-    # If minimal flavor -> exit here
-    if [ "$WORKSPACE_FLAVOR" = "minimal" ]; then \
-        exit 0 ; \
-    fi && \
-    cd $RESOURCES_PATH && \
+RUN cd $RESOURCES_PATH && \
     mkdir -p $HOME/.vscode/extensions/ && \
     # Install vs code jupyter - required by python extension
-    VS_JUPYTER_VERSION="2021.6.832593372" && \
-    wget --retry-on-http-error=429 --waitretry 15 --tries 5 --no-verbose https://marketplace.visualstudio.com/_apis/public/gallery/publishers/ms-toolsai/vsextensions/jupyter/$VS_JUPYTER_VERSION/vspackage -O ms-toolsai.jupyter-$VS_JUPYTER_VERSION.vsix && \
-    bsdtar -xf ms-toolsai.jupyter-$VS_JUPYTER_VERSION.vsix extension && \
-    rm ms-toolsai.jupyter-$VS_JUPYTER_VERSION.vsix && \
-    mv extension $HOME/.vscode/extensions/ms-toolsai.jupyter-$VS_JUPYTER_VERSION && \
-    sleep $SLEEP_TIMER && \
-    # Install python extension - (newer versions are 30MB bigger)
-    VS_PYTHON_VERSION="2021.5.926500501" && \
-    wget --no-verbose https://github.com/microsoft/vscode-python/releases/download/$VS_PYTHON_VERSION/ms-python-release.vsix && \
-    bsdtar -xf ms-python-release.vsix extension && \
-    rm ms-python-release.vsix && \
-    mv extension $HOME/.vscode/extensions/ms-python.python-$VS_PYTHON_VERSION && \
-    # && code-server --install-extension ms-python.python@$VS_PYTHON_VERSION \
-    sleep $SLEEP_TIMER && \
-    # If light flavor -> exit here
-    if [ "$WORKSPACE_FLAVOR" = "light" ]; then \
-        exit 0 ; \
-    fi && \
-    # Install prettie: https://github.com/prettier/prettier-vscode/releases
-    PRETTIER_VERSION="6.4.0" && \
-    wget --no-verbose https://github.com/prettier/prettier-vscode/releases/download/v$PRETTIER_VERSION/prettier-vscode-$PRETTIER_VERSION.vsix && \
-    bsdtar -xf prettier-vscode-$PRETTIER_VERSION.vsix extension && \
-    rm prettier-vscode-$PRETTIER_VERSION.vsix && \
-    mv extension $HOME/.vscode/extensions/prettier-vscode-$PRETTIER_VERSION.vsix && \
-    # Install code runner: https://github.com/formulahendry/vscode-code-runner/releases/latest
-    VS_CODE_RUNNER_VERSION="0.9.17" && \
-    wget --no-verbose https://github.com/formulahendry/vscode-code-runner/releases/download/$VS_CODE_RUNNER_VERSION/code-runner-$VS_CODE_RUNNER_VERSION.vsix && \
-    bsdtar -xf code-runner-$VS_CODE_RUNNER_VERSION.vsix extension && \
-    rm code-runner-$VS_CODE_RUNNER_VERSION.vsix && \
-    mv extension $HOME/.vscode/extensions/code-runner-$VS_CODE_RUNNER_VERSION && \
-    # && code-server --install-extension formulahendry.code-runner@$VS_CODE_RUNNER_VERSION \
-    sleep $SLEEP_TIMER && \
-    # Install ESLint extension: https://marketplace.visualstudio.com/items?itemName=dbaeumer.vscode-eslint
-    VS_ESLINT_VERSION="2.1.23" && \
-    wget --retry-on-http-error=429 --waitretry 15 --tries 5 --no-verbose https://marketplace.visualstudio.com/_apis/public/gallery/publishers/dbaeumer/vsextensions/vscode-eslint/$VS_ESLINT_VERSION/vspackage -O dbaeumer.vscode-eslint.vsix && \
-    # && wget --no-verbose https://github.com/microsoft/vscode-eslint/releases/download/$VS_ESLINT_VERSION-insider.2/vscode-eslint-$VS_ESLINT_VERSION.vsix -O dbaeumer.vscode-eslint.vsix && \
-    bsdtar -xf dbaeumer.vscode-eslint.vsix extension && \
-    rm dbaeumer.vscode-eslint.vsix && \
-    mv extension $HOME/.vscode/extensions/dbaeumer.vscode-eslint-$VS_ESLINT_VERSION.vsix && \
-    # && code-server --install-extension dbaeumer.vscode-eslint@$VS_ESLINT_VERSION \
-    # Fix permissions
+    code --list-extensions --no-sandbox --user-data-dir /root && \
+    code --no-sandbox --user-data-dir /root --install-extension  ms-toolsai.jupyter && \
+    code --no-sandbox --user-data-dir /root --install-extension ms-python.python && \
+    code --no-sandbox --user-data-dir /root --install-extension  esbenp.prettier-vscode && \
+    code --no-sandbox --user-data-dir /root --install-extension  formulahendry.code-runner && \
+    code --no-sandbox --user-data-dir /root --install-extension  dbaeumer.vscode-eslint && \
+    code --no-sandbox --user-data-dir /root --install-extension  dbaeumer.vscode-eslint && \
     fix-permissions.sh $HOME/.vscode/extensions/ && \
     # Cleanup
     clean-layer.sh
 
 ### END VSCODE ###
-
-### INCUBATION ZONE ###
-
-RUN \
-    apt-get update && \
-    # Required by magenta
-    # apt-get install -y libasound2-dev && \
-    # required by rodeo ide (8MB)
-    # apt-get install -y libgconf2-4 && \
-    # required for pvporcupine (800kb)
-    # apt-get install -y portaudio19-dev && \
-    # Audio drivers for magenta? (3MB)
-    # apt-get install -y libasound2-dev libjack-dev && \
-    # libproj-dev required for cartopy (15MB)
-    # apt-get install -y libproj-dev && \
-    # mysql server: 150MB
-    # apt-get install -y mysql-server && \
-    # If minimal or light flavor -> exit here
-    if [ "$WORKSPACE_FLAVOR" = "minimal" ] || [ "$WORKSPACE_FLAVOR" = "light" ]; then \
-        # Cleanup
-        clean-layer.sh  && \
-        exit 0 ; \
-    fi && \
-    # Install fkill-cli program  TODO: 30MB, remove?
-    # npm install --global fkill-cli && \
-    # Activate pretty-errors
-    # python -m pretty_errors -u -p && \
-    # Cleanup
-    clean-layer.sh
-
-### END INCUBATION ZONE ###
 
 ### CONFIGURATION ###
 
@@ -944,12 +532,6 @@ COPY \
     resources/docker-entrypoint.py \
     resources/5xx.html \
     $RESOURCES_PATH/
-
-# Copy scripts into workspace
-COPY resources/scripts $RESOURCES_PATH/scripts
-
-# Create Desktop Icons for Tooling
-COPY resources/branding $RESOURCES_PATH/branding
 
 # Configure Home folder (e.g. xfce)
 COPY resources/home/ $HOME/
@@ -991,7 +573,8 @@ COPY resources/jupyter/plugin.jupyterlab-settings $HOME/.jupyter/lab/user-settin
 COPY resources/jupyter/ipython_config.py /etc/ipython/ipython_config.py
 
 # Branding of various components
-RUN \
+RUN mkdir -p $CONDA_PYTHON_DIR"/site-packages/notebook/static/base/images" && \
+    mkdir -p $RESOURCES_PATH"/filebrowser" && \
     # Jupyter Branding
     cp -f $RESOURCES_PATH/branding/logo.png $CONDA_PYTHON_DIR"/site-packages/notebook/static/base/images/logo.png" && \
     cp -f $RESOURCES_PATH/branding/favicon.ico $CONDA_PYTHON_DIR"/site-packages/notebook/static/base/images/favicon.ico" && \
@@ -1010,17 +593,6 @@ RUN \
     # Use store or credentialstore instead? timout == 365 days validity
     git config --global credential.helper 'cache --timeout=31540000'
 
-# Configure netdata
-COPY resources/netdata/ /etc/netdata/
-COPY resources/netdata/cloud.conf /var/lib/netdata/cloud.d/cloud.conf
-
-# Configure Matplotlib
-RUN \
-    # Import matplotlib the first time to build the font cache.
-    MPLBACKEND=Agg python -c "import matplotlib.pyplot" \
-    # Stop Matplotlib printing junk to the console on first load
-    sed -i "s/^.*Matplotlib is building the font cache using fc-list.*$/# Warning removed/g" $CONDA_PYTHON_DIR/site-packages/matplotlib/font_manager.py
-
 # Create Desktop Icons for Tooling
 COPY resources/icons $RESOURCES_PATH/icons
 
@@ -1028,22 +600,12 @@ RUN \
     # ungit:
     echo "[Desktop Entry]\nVersion=1.0\nType=Link\nName=Ungit\nComment=Git Client\nCategories=Development;\nIcon=/resources/icons/ungit-icon.png\nURL=http://localhost:8092/tools/ungit" > /usr/share/applications/ungit.desktop && \
     chmod +x /usr/share/applications/ungit.desktop && \
-    # netdata:
-    echo "[Desktop Entry]\nVersion=1.0\nType=Link\nName=Netdata\nComment=Hardware Monitoring\nCategories=System;Utility;Development;\nIcon=/resources/icons/netdata-icon.png\nURL=http://localhost:8092/tools/netdata" > /usr/share/applications/netdata.desktop && \
-    chmod +x /usr/share/applications/netdata.desktop && \
     # glances:
     echo "[Desktop Entry]\nVersion=1.0\nType=Link\nName=Glances\nComment=Hardware Monitoring\nCategories=System;Utility;\nIcon=/resources/icons/glances-icon.png\nURL=http://localhost:8092/tools/glances" > /usr/share/applications/glances.desktop && \
     chmod +x /usr/share/applications/glances.desktop && \
     # Remove mail and logout desktop icons
     rm -f /usr/share/applications/xfce4-mail-reader.desktop && \
     rm -f /usr/share/applications/xfce4-session-logout.desktop
-
-# Copy resources into workspace
-COPY resources/tools $RESOURCES_PATH/tools
-COPY resources/tests $RESOURCES_PATH/tests
-COPY resources/tutorials $RESOURCES_PATH/tutorials
-COPY resources/licenses $RESOURCES_PATH/licenses
-COPY resources/reports $RESOURCES_PATH/reports
 
 # Various configurations
 RUN \
@@ -1055,7 +617,7 @@ RUN \
     chmod -R a+rwx /usr/share/applications/ && \
     ln -s $RESOURCES_PATH/tools/ $HOME/Desktop/Tools && \
     ln -s $WORKSPACE_HOME $HOME/Desktop/workspace && \
-    chmod a+rwx /usr/local/bin/start-notebook.sh && \
+    chmod a+rwx /usr/local/bin/start-jupyter.sh && \
     chmod a+rwx /usr/local/bin/start.sh && \
     chmod a+rwx /usr/local/bin/start-singleuser.sh && \
     chown root:root /tmp && \
@@ -1138,22 +700,22 @@ LABEL \
     "io.openshift.min-memory"="1Gi" \
     # Open Container labels: https://github.com/opencontainers/image-spec/blob/master/annotations.md
     "org.opencontainers.image.title"="Machine Learning Workspace" \
-    "org.opencontainers.image.description"="All-in-one web-based development environment for machine learning." \
+    "org.opencontainers.image.description"="Ready to Dev Image." \
     "org.opencontainers.image.documentation"="https://github.com/ml-tooling/ml-workspace" \
     "org.opencontainers.image.url"="https://github.com/ml-tooling/ml-workspace" \
     "org.opencontainers.image.source"="https://github.com/ml-tooling/ml-workspace" \
     # "org.opencontainers.image.licenses"="Apache-2.0" \
     "org.opencontainers.image.version"=$WORKSPACE_VERSION \
     "org.opencontainers.image.vendor"="ML Tooling" \
-    "org.opencontainers.image.authors"="Lukas Masuch & Benjamin Raethlein" \
+    "org.opencontainers.image.authors"="Kleyton67" \
     "org.opencontainers.image.revision"=$ARG_VCS_REF \
     "org.opencontainers.image.created"=$ARG_BUILD_DATE \
     # Label Schema Convention (deprecated): http://label-schema.org/rc1/
     "org.label-schema.name"="Machine Learning Workspace" \
-    "org.label-schema.description"="All-in-one web-based development environment for machine learning." \
-    "org.label-schema.usage"="https://github.com/ml-tooling/ml-workspace" \
-    "org.label-schema.url"="https://github.com/ml-tooling/ml-workspace" \
-    "org.label-schema.vcs-url"="https://github.com/ml-tooling/ml-workspace" \
+    "org.label-schema.description"="Ready to Dev Image." \
+    "org.label-schema.usage"="https://github.com/kleyton67/ml-workspace-custom" \
+    "org.label-schema.url"="https://github.com/kleyton67/ml-workspace-custom" \
+    "org.label-schema.vcs-url"="https://github.com/kleyton67/ml-workspace-custom" \
     "org.label-schema.vendor"="ML Tooling" \
     "org.label-schema.version"=$WORKSPACE_VERSION \
     "org.label-schema.schema-version"="1.0" \

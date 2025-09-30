@@ -51,7 +51,7 @@ call('printf "' + shortcut_metadata + '" > /usr/share/applications/jupyterlab.de
 call('chmod +x /usr/share/applications/jupyterlab.desktop', shell=True) # Make executable
 
 # Configure filebrowser - only if database file does not exist yet (e.g. isn't restored)
-if not os.path.exists(HOME + '/filebrowser.db'):
+if not os.path.exists(HOME + '/filebrowser.db') and 0:
     log.info("Initialize filebrowser database.")
     # Init filebrowser configuration - Surpress all output
     call('filebrowser config init --database=' + HOME + '/filebrowser.db > /dev/null', shell=True)

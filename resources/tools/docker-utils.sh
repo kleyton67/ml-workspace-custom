@@ -35,8 +35,8 @@ if ! hash docker 2>/dev/null; then
     # Install docker compose
     pip install -U --no-cache-dir docker-compose
     # Install ctop - Already installed?
-    echo "deb http://packages.azlux.fr/debian/ buster main" | sudo tee /etc/apt/sources.list.d/azlux.list
-    wget -qO - https://azlux.fr/repo.gpg.key | sudo apt-key add -
+    echo "deb http://packages.azlux.fr/debian/ buster main" | tee /etc/apt/sources.list.d/azlux.list
+    wget -qO - https://azlux.fr/repo.gpg.key | apt-key add -
     apt-get update
     apt-get install docker-ctop
 else
@@ -50,7 +50,7 @@ fi
 
 if ! hash act 2>/dev/null; then
     echo "Installing Act. Please wait..."
-    curl https://raw.githubusercontent.com/nektos/act/master/install.sh | sudo bash
+    curl https://raw.githubusercontent.com/nektos/act/master/install.sh | bash
 fi
 
 # Install vscode docker extension

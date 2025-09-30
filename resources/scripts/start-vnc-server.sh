@@ -16,6 +16,9 @@ VNC_PW=${VNC_PW:-"vncpassword"}
 VNC_RESOLUTION=${VNC_RESOLUTION:-"1600x900"}
 VNC_COL_DEPTH=${VNC_COL_DEPTH:-"24"}
 
+echo $VNC_PW
+echo $HOME
+
 mkdir -p $HOME/.vnc
 touch $HOME/.vnc/passwd
 

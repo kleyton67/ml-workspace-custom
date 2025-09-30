@@ -1,7 +1,7 @@
 #!/bin/sh
 
 # Stops script execution if a command has an error
-set -e
+set -exv
 
 INSTALL_ONLY=0
 PORT=""
@@ -23,7 +23,7 @@ if [ ! -f "/usr/local/bin/code-server"  ]; then
     # yarn cache clean
     # ln -s /usr/local/bin/code-server /usr/bin/code-server
     # Use installer
-    wget -q https://github.com/coder/code-server/releases/download/v3.10.2/code-server_3.10.2_amd64.deb -O ./code-server.deb
+    wget -q https://github.com/coder/code-server/releases/download/v4.104.1/code-server_4.104.1_amd64.deb -O ./code-server.deb
     apt-get update
     apt-get install -y ./code-server.deb
     rm ./code-server.deb

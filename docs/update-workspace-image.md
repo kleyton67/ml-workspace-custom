@@ -58,10 +58,9 @@ We plan to do a full workspace image update (all libraries and tools) about ever
 
 7. Update `minimmal` and `light` flavor Python libraries:
 
-   - Update requirement files using [piprot](https://github.com/sesh/piprot), [pur](https://github.com/alanhamlett/pip-update-requirements), or [pip-upgrader](https://github.com/simion/pip-upgrader):
-     - `piprot ./resources/libraries/requirements-minimal.txt`
-     - `piprot ./resources/libraries/requirements-light.txt`
-     - [pur](https://github.com/alanhamlett/pip-update-requirements) example: `pur -i -r ./resources/libraries/requirements-minimal.txt`
+   - Update requirement files using [pur](https://pypi.org/project/pur/):
+     - `pur ./resources/libraries/requirements-minimal.txt`
+     - `pur ./resources/libraries/requirements-light.txt`
 
 8. Build and test `minimal` flavor:
 
