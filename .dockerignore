@@ -4,3 +4,4 @@
 **/Thumbs.db
 **/*.pyc
 .DS_Store
+docker-compose.yaml

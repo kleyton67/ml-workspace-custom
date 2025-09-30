@@ -1,18 +1,25 @@
 services:
   ml-workspace:
-    image: kleyton67/ml-workspace:0.u2404.n13.0
+    image: kleyton67/ml-workspace:0.u2404.n12.8
     build:
-      dockerfile: ./Dockerfile
+      dockerfile: ./Dockerfile.128
       context: .
     container_name: ml-workspace
     ports:
       - "8580:8080"
     volumes:
-      # - /mnt/ssds/SSD_1/mltooling/jupyter-data:/workspace
-      # - /opt/conda:/mnt/ssds/SSD_1/mltooling/conda
+      # - /mnt/ssds/SSD_1/mltooling/jupyter-data/workspace:/root/workspace
+      # - /mnt/data/mltooling-hd:/root/workspace-hd
+      # - /mnt/ssds/SSD_1/mltooling/conda:/opt/conda/conda
       - /var/run/docker.sock:/var/run/docker.sock
+      - ./logs:/var/log/supervisor/
     deploy:       # ← Modern Docker GPU reservation
       resources:
+        limits:
+          # CPU: Maximum number of CPUs (e.g., 2.5)
+          cpus: '8'
+          # Memory: Maximum memory (e.g., 512MB or 512000000 bytes)
+          memory: 12G
         reservations:
           devices:
             - driver: nvidia

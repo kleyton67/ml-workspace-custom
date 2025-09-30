@@ -16,3 +16,9 @@ Ao executar o compose, verifique os volumes necessários dentro do arquivo docke
 Ao executar, crie um hash para acessar a página e coloque-o na variável de ambiente: AUTHENTICATE_VIA_JUPYTER .
 
 Recomendo usar o Conda e o workspace em um ambiente separado para reduzir o tamanho do pod, para isso, apenas copie as pastas Conda e workspace da imagem e coloque-as em um local que você tenha espaço.
+
+### Copiar ambinete conda para pasta no host
+```bash
+docker cp ml-workspace:/opt/conda /mnt/ssds/SSD_1/mltooling/conda
+docker cp ml-workspace:/root/workspace /mnt/ssds/SSD_1/mltooling/jupyter-data
+```
