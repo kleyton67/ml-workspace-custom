@@ -1,6 +1,6 @@
 services:
   ml-workspace:
-    image: mltooling/ml-workspace:0.u2404.n13.0
+    image: kleyton67/ml-workspace:0.u2404.n13.0
     build:
       dockerfile: ./Dockerfile
       context: .
