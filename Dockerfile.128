@@ -102,7 +102,6 @@ RUN \
         libgdbm-dev \
         libncurses5-dev \
         libncursesw5-dev \
-        # required by pyenv
         libreadline-dev \
         libedit-dev \
         xz-utils \
@@ -152,7 +151,6 @@ RUN \
         # Json Processor
         jq \
         rsync \
-        # sqlite3 driver - required for pyenv
         libsqlite3-dev \
         # VCS:
         git \
@@ -374,8 +372,11 @@ RUN \
     # Leightweight ftp client that supports sftp, http, ...
     apt-get install -y --no-install-recommends gftp && \
     apt-get update && \
-    apt-get install -y chromium-browser chromium-browser-l10n chromium-codecs-ffmpeg && \
-    ln -s /usr/bin/chromium-browser /usr/bin/google-chrome && \
+    wget https://cdn1.waterfox.net/waterfox/releases/6.6.3/Linux_x86_64/waterfox-6.6.3.tar.bz2 && \
+    tar -xjvf waterfox-6.6.3.tar.bz2 && \
+    mv waterfox /opt/. && \
+    chmod +x /opt/waterfox/waterfox && \
+    ln -s /opt/waterfox/waterfox /usr/bin/waterfox && \
     # Cleanup
     apt-get purge -y pm-utils xscreensaver* && \
     # Large package: gnome-user-guide 50MB app-install-data 50MB
@@ -602,6 +603,8 @@ RUN \
     chmod +x /usr/share/applications/ungit.desktop && \
     # glances:
     echo "[Desktop Entry]\nVersion=1.0\nType=Link\nName=Glances\nComment=Hardware Monitoring\nCategories=System;Utility;\nIcon=/resources/icons/glances-icon.png\nURL=http://localhost:8092/tools/glances" > /usr/share/applications/glances.desktop && \
+    # waterfox
+    echo "[Desktop Entry\nName=Waterfox\nComment=Navegador Web rápido e privado\nExec=/opt/waterfox/waterfox %U\nIcon=/opt/waterfox/browser/chrome/icons/default/default128.png\nTerminal=false\nType=Application\nCategories=Network;\nWebBrowser;\nStartupNotify=true" > /usr/share/applications/waterfox.desktop && \
     chmod +x /usr/share/applications/glances.desktop && \
     # Remove mail and logout desktop icons
     rm -f /usr/share/applications/xfce4-mail-reader.desktop && \

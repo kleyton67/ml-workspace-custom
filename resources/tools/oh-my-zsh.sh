@@ -52,7 +52,11 @@ if ! hash zsh 2>/dev/null; then
     # Fix red arrow problem with avit theme
     sed -i 's/fg\[red\]}.${fg\[white\]})%}▶/fg\[white\]}.${fg\[white\]})%}▶/g' ~/.oh-my-zsh/themes/avit.zsh-theme
 
-    printf "export source ZSH=\"$HOME/.oh-my-zsh\"\nZSH_THEME=\"avit\"\nDISABLE_AUTO_UPDATE=\"true\"\nZSH_AUTOSUGGEST_HIGHLIGHT_STYLE=\"fg=245\"\nplugins=(git k extract cp pip yarn npm zsh-256color supervisor rsync command-not-found autojump colored-man-pages git-flow git-extras httpie python zsh-autosuggestions history-substring-search zsh-completions zsh-syntax-highlighting)\nsource \$ZSH/oh-my-zsh.sh\nLS_COLORS=\"\"\nexport LS_COLORS\nalias pcat=\"pygmentize -g\"\neval \"\$(pyenv init -)\"\neval \"\$(pyenv virtualenv-init -)\"" > ~/.zshrc
+    printf "export source ZSH=\"$HOME/.oh-my-zsh\"\nZSH_THEME=\"avit\"\nDISABLE_AUTO_UPDATE=\"true\"\nZSH_AUTOSUGGEST_HIGHLIGHT_STYLE=\"fg=245\"\nplugins=(git k extract cp pip yarn npm zsh-256color supervisor rsync command-not-found autojump colored-man-pages git-flow git-extras httpie python zsh-autosuggestions history-substring-search zsh-completions zsh-syntax-highlighting)\nsource \$ZSH/oh-my-zsh.sh\nLS_COLORS=\"\"\nexport LS_COLORS\nalias pcat=\"pygmentize -g\"\n"" > ~/.zshrc
+
+    # to remove pyenv from .zsh
+    sed -i '/^eval "\$(pyenv init -)"/d' ~/.zshrc
+    sed -i '/^eval "\$(pyenv virtualenv-init -)"/d' ~/.zshrc
 
     # Also add fzf to plugins
     git clone --depth 1 https://github.com/junegunn/fzf.git $RESOURCES_PATH/.fzf
