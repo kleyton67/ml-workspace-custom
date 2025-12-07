@@ -1,0 +1,7 @@
+# jupyter_tooling_extension.toml
+name = "Jupyter-Tooling-Extension"
+version = "0.1"
+description = "Jupyter extension for tooling integration"
+packages = ["jupyter_tooling"]
+include-package-data = true
+install_requires = ["GitPython"]

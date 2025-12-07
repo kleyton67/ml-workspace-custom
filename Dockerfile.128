@@ -6,8 +6,6 @@ USER root
 
 COPY resources/nginx/lua-extensions /etc/nginx/nginx_plugins
 
-WORKDIR $HOME
-
 # Layer cleanup script
 COPY resources/scripts/  /usr/bin/
 
@@ -16,6 +14,9 @@ COPY \
     resources/jupyter/start-jupyter.sh \
     resources/jupyter/start-singleuser.sh \
     /usr/local/bin/
+
+    # Install Jupyter Tooling Extension
+COPY resources/jupyter/extensions $RESOURCES_PATH/jupyter-extensions
 
 ENV SHELL="/bin/bash" \
     HOME="/root"  \
@@ -36,6 +37,8 @@ ENV SHELL="/bin/bash" \
     CONDA_DIR=/opt/conda \
     CONDA_ROOT=/opt/conda \
     CONDA_PYTHON_DIR=/opt/conda/lib/python
+
+WORKDIR $HOME
 
 # Copy resources into workspace
 COPY resources $RESOURCES_PATH
@@ -446,13 +449,11 @@ RUN \
     # rm /usr/bin/python3 && \
     # rm /usr/bin/python3.5
     ### Install main data science libs
-    ln -s -f $CONDA_ROOT/bin/python /usr/bin/python
-    
-RUN \
+    ln -s -f $CONDA_ROOT/bin/python /usr/bin/python &&\
     $CONDA_ROOT/bin/conda install -c conda-forge notebook && \
     $CONDA_ROOT/bin/pip install --no-cache-dir -r ${RESOURCES_PATH}/libraries/requirements.txt && \
     # Install some basics - required to run container
-    $CONDA_ROOT/bin/conda install -y \
+    $CONDA_ROOT/bin/pip install --no-cache \
             'jupyter' \
             'jupyterlab' \
             # TODO: nbconvert 6.x makes problems with template_path
@@ -460,17 +461,15 @@ RUN \
             # TODO: temp fix: yarl version 1.5 is required for lots of libraries.
             'yarl' \
             # TODO install scipy, numpy, sklearn, and numexpr via conda for mkl optimizaed versions: https://docs.anaconda.com/mkl-optimizations/
-            'scipy*' \
-            'numpy*' \
+            'scipy' \
+            'numpy' \
             'scikit-learn' \
             'numexpr' && \
-    $CONDA_ROOT/bin/jupyter contrib nbextension install --user && \
+    $CONDA_ROOT/bin/python -m jupyter contrib nbextension install --user && \
             # installed via apt-get and pip: protobuf \
             # installed via apt-get: zlib  && \
     # Switch of channel priority, makes some trouble
     $CONDA_ROOT/bin/conda config --system --set channel_priority false && \
-    # Faiss - A library for efficient similarity search and clustering of dense vectors.
-    $CONDA_ROOT/bin/conda install -y --freeze-installed faiss-cpu && \
     # Fix permissions
     # Fix conda version
     # Conda installs wrong node version - relink conda node to the actual node
@@ -483,20 +482,14 @@ RUN \
     $CONDA_ROOT/bin/pip install --no-cache-dir --upgrade jinja2 MarkupSafe && \
     # Create empty notebook configuration
     mkdir -p $HOME/.jupyter/nbconfig/ && \
-    printf "{\"load_extensions\": {}}" > $HOME/.jupyter/nbconfig/notebook.json
-    # nbextensions configurator
-    
-# Install Jupyter Tooling Extension
-COPY resources/jupyter/extensions $RESOURCES_PATH/jupyter-extensions
+    printf "{\"load_extensions\": {}}" > $HOME/.jupyter/nbconfig/notebook.json && \
+    $CONDA_ROOT/bin/conda install --force-reinstall -y  jupyter && \
+    cd $RESOURCES_PATH/jupyter/extensions/tooling-extension/. && \
+    $CONDA_ROOT/bin/python setup.py install && \
+    clean-layer.sh
 
-RUN \
-    $CONDA_ROOT/bin/pip install --no-cache-dir $RESOURCES_PATH/jupyter-extensions/tooling-extension/ && \
     # Install ZSH
-    /bin/bash $RESOURCES_PATH/tools/oh-my-zsh.sh --install && \
-    # Make zsh the default shell
-    # Initialize conda for command line activation
-    # TODO do not activate for now, opening the bash shell is a bit slow
-    # conda init bash && \
+RUN /bin/bash $RESOURCES_PATH/tools/oh-my-zsh.sh --install && \
     conda init zsh && \
     chsh -s $(which zsh) $NB_USER && \
     # Install sdkman - needs to be executed after zsh

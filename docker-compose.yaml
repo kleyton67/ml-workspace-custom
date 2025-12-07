@@ -4,11 +4,11 @@ services:
     build:
       dockerfile: ./Dockerfile.128
       context: .
-    container_name: ml-workspace
+    container_name: ml-workspace-test
     ports:
-      - "8580:8080"
+      - "8588:8080"
     volumes:
-      # - /mnt/ssds/SSD_1/mltooling/jupyter-data/workspace:/root/workspace
+      # - /mnt/ssds/D_1/mltooling/jupyter-data:/root/workspace
       # - /mnt/data/mltooling-hd:/root/workspace-hd
       # - /mnt/ssds/SSD_1/mltooling/conda:/opt/conda/conda
       - /var/run/docker.sock:/var/run/docker.sock
@@ -17,16 +17,16 @@ services:
       resources:
         limits:
           # CPU: Maximum number of CPUs (e.g., 2.5)
-          cpus: '8'
+          cpus: '6'
           # Memory: Maximum memory (e.g., 512MB or 512000000 bytes)
-          memory: 12G
+          memory: 16G
         reservations:
           devices:
             - driver: nvidia
               count: 1
               capabilities: [gpu]
     environment:
-      - AUTHENTICATE_VIA_JUPYTER=test-182
+      - AUTHENTICATE_VIA_JUPYTER=key123
     shm_size: 512m
     restart: always
     network_mode: bridge

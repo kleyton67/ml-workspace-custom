@@ -29,6 +29,8 @@ chmod 1777 /tmp
 # Remove apt lists
 # rm -rf /var/lib/apt/lists/* /etc/apt/sources.list.d/*
 
+rm -rf /root/.cache
+
 # Clean conda
 if [ -x "$(command -v conda)" ]; then
     # Full Conda Cleanup
