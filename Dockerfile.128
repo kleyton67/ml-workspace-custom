@@ -337,7 +337,7 @@ RUN \
     apt-get install -y --no-install-recommends xfce4 && \
     apt-get install -y --no-install-recommends xfce4-terminal && \
     apt-get install -y --no-install-recommends xfce4-clipman && \
-    apt-get install -y --no-install-recommends xterm && \
+    apt-get install -y --no-install-recommends libxcvt0 && \
     apt-get install -y --no-install-recommends --allow-unauthenticated xfce4-taskmanager  && \
     # Install dependencies to enable vncserver
     apt-get install -y --no-install-recommends xauth xinit dbus-x11 && \
@@ -348,16 +348,6 @@ RUN \
     apt-get install -y --no-install-recommends font-manager && \
     # vs support for thunar
     apt-get install -y thunar-vcs-plugin && \
-    # Streaming text editor for large files - klogg is alternative to glogg
-    apt-get install -y --no-install-recommends libqt5concurrent5 libqt5widgets5 libqt5xml5 && \
-    wget --no-verbose https://github.com/variar/klogg/releases/download/v20.12/klogg-20.12.0.813-Linux.deb -O $RESOURCES_PATH/klogg.deb && \
-    dpkg -i $RESOURCES_PATH/klogg.deb && \
-    rm $RESOURCES_PATH/klogg.deb && \
-    # Disk Usage Visualizer
-    apt-get install -y --no-install-recommends baobab && \
-    # Lightweight text editor
-    apt-get install -y --no-install-recommends mousepad && \
-    apt-get install -y --no-install-recommends vim && \
     # Process monitoring
     apt-get install -y --no-install-recommends htop && \
     # Install Archive/Compression Tools: https://wiki.ubuntuusers.de/Archivmanager/
@@ -366,8 +356,6 @@ RUN \
     apt-get install -y xarchiver && \
     # DB Utils
     apt-get install -y --no-install-recommends sqlitebrowser && \
-    # Install nautilus and support for sftp mounting
-    apt-get install -y --no-install-recommends nautilus gvfs-backends && \
     # Install gigolo - Access remote systems
     apt-get install -y --no-install-recommends gigolo && \
     # xfce systemload panel plugin - needs to be activated
@@ -418,13 +406,10 @@ RUN \
     # apt-get install -y python-numpy  && \
     cd ${RESOURCES_PATH} && \
     # Tiger VNC
-    wget -qO- https://sourceforge.net/projects/tigervnc/files/stable/1.11.0/tigervnc-1.11.0.x86_64.tar.gz/download | tar xz --strip 1 -C / && \
+    wget -qO- https://sourceforge.net/projects/tigervnc/files/stable/1.15.0/tigervnc-1.15.0.x86_64.tar.gz/download | tar xz --strip 1 -C / && \
     # Install websockify
-    mkdir -p ./novnc/utils/websockify && \
-    # Before updating the noVNC version, we need to make sure that our monkey patching scripts still work!!
-    wget -qO- https://github.com/novnc/noVNC/archive/v1.2.0.tar.gz | tar xz --strip 1 -C ./novnc && \
-    wget -qO- https://github.com/novnc/websockify/archive/v0.9.0.tar.gz | tar xz --strip 1 -C ./novnc/utils/websockify && \
-    chmod +x -v ./novnc/utils/*.sh && \
+    git clone https://github.com/novnc/noVNC.git && \
+    chmod +x -v ./noVNC/utils/novnc_proxy && \
     # create user vnc directory
     mkdir -p $HOME/.vnc && \
     # Fix permissions
@@ -512,7 +497,6 @@ RUN cd $RESOURCES_PATH && \
     code --no-sandbox --user-data-dir /root --install-extension  esbenp.prettier-vscode && \
     code --no-sandbox --user-data-dir /root --install-extension  formulahendry.code-runner && \
     code --no-sandbox --user-data-dir /root --install-extension  dbaeumer.vscode-eslint && \
-    code --no-sandbox --user-data-dir /root --install-extension  dbaeumer.vscode-eslint && \
     fix-permissions.sh $HOME/.vscode/extensions/ && \
     # Cleanup
     clean-layer.sh
@@ -543,13 +527,14 @@ COPY resources/supervisor/programs/ /etc/supervisor/conf.d/
 # Assume yes to all apt commands, to avoid user confusion around stdin.
 COPY resources/config/90assumeyes /etc/apt/apt.conf.d/
 
+# TODO Fix the index.html to support new novnc 
 # Monkey Patching novnc: Styling and added clipboard support. All changed sections are marked with CUSTOM CODE
-COPY resources/novnc/ $RESOURCES_PATH/novnc/
+# COPY resources/novnc/ $RESOURCES_PATH/noVNC/
 
-RUN \
-    ## create index.html to forward automatically to `vnc.html`
-    # Needs to be run after patching
-    ln -s $RESOURCES_PATH/novnc/vnc.html $RESOURCES_PATH/novnc/index.html
+# RUN \
+#     ## create index.html to forward automatically to `vnc.html`
+#     # Needs to be run after patching
+#     ln -s $RESOURCES_PATH/noVNC/vnc.html $RESOURCES_PATH/noVNC/index.html
 
 # Basic VNC Settings - no password
 ENV \

@@ -7,6 +7,7 @@ services:
     container_name: ml-workspace-test
     ports:
       - "8588:8080"
+      - "8589:6901"
     volumes:
       # - /mnt/ssds/D_1/mltooling/jupyter-data:/root/workspace
       # - /mnt/data/mltooling-hd:/root/workspace-hd
