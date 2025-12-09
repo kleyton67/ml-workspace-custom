@@ -40,7 +40,8 @@ if ! hash zsh 2>/dev/null; then
     git clone https://github.com/zsh-users/zsh-completions ${ZSH_CUSTOM:=~/.oh-my-zsh/custom}/plugins/zsh-completions
     git clone https://github.com/supercrabtree/k ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/k
     git clone https://github.com/chrissicool/zsh-256color ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-256color
-    curl -fsSL -o $RESOURCES_PATH/instant-zsh.zsh https://gist.github.com/romkatv/8b318a610dc302bdbe1487bb1847ad99/raw
+    git clone https://github.com/b-ryan/powerline-shell.git ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/powerline_shell
+    mv $RESOURCES_PATH/tools/instant-zsh.zsh $RESOURCES_PATH/instant-zsh.zsh
 
     # Use avit theme instead of typewritten: Install typewritten theme
     # git clone https://github.com/reobin/typewritten.git ${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/themes/typewritten
@@ -52,7 +53,7 @@ if ! hash zsh 2>/dev/null; then
     # Fix red arrow problem with avit theme
     sed -i 's/fg\[red\]}.${fg\[white\]})%}▶/fg\[white\]}.${fg\[white\]})%}▶/g' ~/.oh-my-zsh/themes/avit.zsh-theme
 
-    printf "export source ZSH=\"$HOME/.oh-my-zsh\"\nZSH_THEME=\"avit\"\nDISABLE_AUTO_UPDATE=\"true\"\nZSH_AUTOSUGGEST_HIGHLIGHT_STYLE=\"fg=245\"\nplugins=(git k extract cp pip yarn npm zsh-256color supervisor rsync command-not-found autojump colored-man-pages git-flow git-extras httpie python zsh-autosuggestions history-substring-search zsh-completions zsh-syntax-highlighting)\nsource \$ZSH/oh-my-zsh.sh\nLS_COLORS=\"\"\nexport LS_COLORS\nalias pcat=\"pygmentize -g\"\n"" > ~/.zshrc
+    printf "export source ZSH=\"$HOME/.oh-my-zsh\"\nZSH_THEME=\"avit\"\nDISABLE_AUTO_UPDATE=\"true\"\nZSH_AUTOSUGGEST_HIGHLIGHT_STYLE=\"fg=245\"\nplugins=(git k extract cp pip yarn npm zsh-256color supervisor rsync command-not-found autojump colored-man-pages git-flow git-extras httpie python zsh-autosuggestions history-substring-search zsh-completions zsh-syntax-highlighting powerline_shell)\nsource \$ZSH/oh-my-zsh.sh\nLS_COLORS=\"\"\nexport LS_COLORS\nalias pcat=\"pygmentize -g\"\n"" > ~/.zshrc
 
     # Also add fzf to plugins
     git clone --depth 1 https://github.com/junegunn/fzf.git $RESOURCES_PATH/.fzf

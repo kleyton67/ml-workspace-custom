@@ -19,6 +19,15 @@ VNC_COL_DEPTH=${VNC_COL_DEPTH:-"24"}
 echo $VNC_PW
 echo $HOME
 
+cat <<EOF > /root/.workspace/tools/01-novnc.json
+{
+  "id": "vnc-link",
+  "name": "VNC",
+  "url_path": "/tools/vnc/?password=$VNC_PW",
+  "description": "Desktop GUI for the workspace"
+}
+EOF
+
 mkdir -p $HOME/.vnc
 touch $HOME/.vnc/passwd
 

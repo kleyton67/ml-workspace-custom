@@ -1,6 +1,6 @@
 services:
   ml-workspace:
-    image: kleyton67/ml-workspace:0.u2404.n12.8
+    image: kleyton67/ml-workspace:0.u2404.n12.8$TAG
     build:
       dockerfile: ./Dockerfile.128
       context: .
@@ -28,6 +28,7 @@ services:
               capabilities: [gpu]
     environment:
       - AUTHENTICATE_VIA_JUPYTER=key123
+      - VNC_PW=key123
     shm_size: 512m
     restart: always
     network_mode: bridge
