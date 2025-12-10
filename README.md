@@ -34,3 +34,22 @@ docker cp ml-workspace:/root/workspace /mnt/ssds/SSD_1/mltooling/jupyter-data
 
 Reinicie o VNC.
 Limpe os caches do navegador.
+
+# A fazer
+- Adicionar extensão ao vscode: https://marketplace.visualstudio.com/items?itemName=MathWorks.language-matlab
+
+- Adicionar extensão ao vscode: https://marketplace.visualstudio.com/items?itemName=ms-python.vscode-pylance
+
+- Adicionar extensão ao vscode: https://marketplace.visualstudio.com/items?itemName=ms-python.python
+
+- Corrigir erro do powerline_shell
+https://github.com/b-ryan/powerline-shell/issues/546
+
+```bash
+/opt/conda/lib/python3.12/site-packages/powerline_shell/__init__.py:18: SyntaxWarning: invalid escape sequence '\`'
+  variable very easily. `os.sep` for windows is `\` but the PWD variable will
+/opt/conda/lib/python3.12/site-packages/powerline_shell/segments/git.py:7: SyntaxWarning: invalid escape sequence '\S'
+  info = re.search('^## (?P<local>\S+?)''(\.{3}(?P<remote>\S+?)( \[(ahead (?P<ahead>\d+)(, )?)?(behind (?P<behind>\d+))?\])?)?$', status[0])
+/opt/conda/lib/python3.12/site-packages/powerline_shell/segments/git.py:7: SyntaxWarning: invalid escape sequence '\.'
+  info = re.search('^## (?P<local>\S+?)''(\.{3}(?P<remote>\S+?)( \[(ahead (?P<ahead>\d+)(, )?)?(behind (?P<behind>\d+))?\])?)?$', status[0])
+```

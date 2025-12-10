@@ -14,6 +14,7 @@ services:
       # - /mnt/ssds/SSD_1/mltooling/conda:/opt/conda/conda
       - /var/run/docker.sock:/var/run/docker.sock
       - ./logs:/var/log/supervisor/
+      - /etc/localtime:/etc/localtime:ro
     deploy:       # ← Modern Docker GPU reservation
       resources:
         limits:
