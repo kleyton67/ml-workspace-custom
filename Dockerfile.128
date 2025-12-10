@@ -325,8 +325,10 @@ RUN \
     $(. /etc/os-release && echo "${UBUNTU_CODENAME:-$VERSION_CODENAME}") stable" | \
     tee /etc/apt/sources.list.d/docker.list > /dev/null && \
     apt-get update && \
-    apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin && \
-    # libartals == 40MB liblapack-dev == 20 MB
+    # apt list -a 
+    # docker-ce docker-ce-cli containerd.io docker-compose-plugin
+    # docker compose plugin v5 has a issue
+    apt-get install -y docker-ce=5:29.0.2-1~ubuntu.24.04~noble docker-ce-cli=5:29.0.2-1~ubuntu.24.04~noble  docker-compose-plugin=2.40.3-1~ubuntu.24.04~noble && \
     apt-get install -y --no-install-recommends liblapack-dev libatlas-base-dev libeigen3-dev libblas-dev && \
     # pandoc -> installs libluajit -> problem for openresty
     # HDF5 (19MB)

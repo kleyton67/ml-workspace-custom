@@ -27,12 +27,12 @@ if ! hash zsh 2>/dev/null; then
     rm -rf fonts
     # Install plugins
     apt-get install -y --no-install-recommends autojump git-flow git-extras ncdu htop
-    pip install Pygments ranger-fm thefuck bpytop
-    git clone https://github.com/b-ryan/powerline-shell
-    cd powerline-shell
-    python setup.py install
-    cd ..
-    rm -rf powerline-shell
+    ## Some issue with docker push
+    # git clone https://github.com/b-ryan/powerline-shell
+    # cd powerline-shell
+    # python setup.py install
+    # cd ..
+    # rm -rf powerline-shell
     # Install fkill-cli: (too big - 30MB) npm install --global fkill-cli && \
     yes | sh -c "$(curl -fsSL https://raw.github.com/robbyrussell/oh-my-zsh/master/tools/install.sh)"
     # Install powerlevel10k for instant prompt
@@ -55,17 +55,17 @@ if ! hash zsh 2>/dev/null; then
     # Other good themes: avit, clean
 
     # Fix red arrow problem with avit theme
-    sed -i 's/fg\[red\]}.${fg\[white\]})%}▶/fg\[white\]}.${fg\[white\]})%}▶/g' ~/.oh-my-zsh/themes/avit.zsh-theme
+    # sed -i 's/fg\[red\]}.${fg\[white\]})%}▶/fg\[white\]}.${fg\[white\]})%}▶/g' ~/.oh-my-zsh/themes/avit.zsh-theme
 
     # export BUILDKIT_PROGRESS="\plain\"\n" avoid error when docker compose log messages
 
-    printf "export source ZSH=\"$HOME/.oh-my-zsh\"\nDISABLE_AUTO_UPDATE=\"true\"\nZSH_AUTOSUGGEST_HIGHLIGHT_STYLE=\"fg=245\"\nplugins=(git k extract cp pip yarn npm zsh-256color supervisor rsync command-not-found autojump colored-man-pages git-flow git-extras httpie python zsh-autosuggestions history-substring-search zsh-completions zsh-syntax-highlighting)\nsource \$ZSH/oh-my-zsh.sh\nLS_COLORS=\"\"\nexport LS_COLORS\nalias pcat=\"pygmentize -g\"\nexport BUILDKIT_PROGRESS=plain\n" > ~/.zshrc
+    # https://docs.docker.com/build/building/variables/#buildkit_progress
+    # BUILDKIT_PROGRESS=none
+    # DOCKER_BUILDKIT=1 
 
-    cat $RESOURCES_PATH/tools/powerline-shell.sh >> ~/.zshrc
-    
-    mkdir -p ~/.config/powerline-shell/
-    echo "{\"segments\": [\"time\", \"cwd\", \"git\"], \"cwd\": {\"max_depth\": 3, \"mode\": \"compact\"}}" > ~/.config/powerline-shell/config.json
+    # use amuse theme
 
+    printf "export source ZSH=\"$HOME/.oh-my-zsh\"\nZSH_THEME=\"amuse\"\nDISABLE_AUTO_UPDATE=\"true\"\nZSH_AUTOSUGGEST_HIGHLIGHT_STYLE=\"fg=245\"\nplugins=(git k extract cp pip yarn npm zsh-256color supervisor command-not-found autojump colored-man-pages git-flow git-extras python zsh-autosuggestions history-substring-search zsh-completions zsh-syntax-highlighting)\nsource \$ZSH/oh-my-zsh.sh\nLS_COLORS=\"\"\nexport LS_COLORS\nalias pcat=\"pygmentize -g\"\n" > ~/.zshrc
 else
     echo "ZSH is already installed"
 fi

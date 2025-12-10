@@ -9,7 +9,7 @@ services:
       - "8588:8080"
       - "8589:6901"
     volumes:
-      # - /mnt/ssds/D_1/mltooling/jupyter-data:/root/workspace
+      # - /mnt/ssds/SSD_1/mltooling/jupyter-data:/root/workspace
       # - /mnt/data/mltooling-hd:/root/workspace-hd
       # - /mnt/ssds/SSD_1/mltooling/conda:/opt/conda/conda
       - /var/run/docker.sock:/var/run/docker.sock
